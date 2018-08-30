@@ -11,3 +11,15 @@ clean:
 data/raw/iris.csv:
 	python src/data/download.py $(DATA_URL) $@
 
+data/processed/processed.pickle: data/raw/iris.csv
+	python src/data/preprocess.py $< $@ --excel data/processed/processed.xlsx
+
+reports/figures/exploratory.png: data/processed/processed.pickle
+	python src/visualization/exploratory.py $< $@
+
+
+test: all
+	pytest src
+
+models/model.model: data/processed/processed.pickle
+	python src/models/model.py $< $@
