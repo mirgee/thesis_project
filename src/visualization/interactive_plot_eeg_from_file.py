@@ -6,10 +6,10 @@ import mne
 import pandas as pd
 import numpy as np
 
-from .config import CHANNEL_NAMES, DATA_ROOT
+from ..config import CHANNEL_NAMES, DATA_ROOT
 
-def get_figure(input_file, names):
-    """Create an matplotlib figure visualizing all channels from a file."""
+def interactive_plot(input_file, names):
+    """Create an interactive figure visualizing all channels from a file."""
 
     df = pd.read_table(input_file, sep='\t', names=names, skiprows=[0])
 
@@ -28,16 +28,13 @@ def get_figure(input_file, names):
 @click.argument('input_file', type=click.Path(exists=False, dir_okay=False))
 @click.option('--output_file', type=click.Path(writable=True, dir_okay=False),
               default=None)
-@click.option('--show', default=True)
-def main(input_file, output_file=None, show=False):
+def main(input_file, output_file=None):
     logger = logging.getLogger(__name__)
     logger.info("Plotting EEG singals from {input_file} to {output_file}...")
 
     input_file_abs = os.path.abspath(os.path.join(DATA_ROOT, input_file))
 
-    fig = get_figure(input_file_abs, CHANNEL_NAMES)
-    if show:
-        fig.plot()
+    fig = interactive_plot(input_file_abs, CHANNEL_NAMES)
     if output_file:
         fig.save(output_file)
 

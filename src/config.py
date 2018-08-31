@@ -1,6 +1,6 @@
 import os.path
 
-PROJ_ROOT = os.path.abspath(os.path.join(os.pardir))
+PROJ_ROOT = os.path.abspath(os.path.join(os.curdir))
 DATA_ROOT = os.path.abspath(os.path.join(PROJ_ROOT, 'data'))
 
 CHANNEL_NAMES = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2',
