@@ -7,11 +7,12 @@ import pandas as pd
 import numpy as np
 
 from ..config import CHANNEL_NAMES, DATA_ROOT
+from ..data.utils import read_raw
 
 def interactive_plot(input_file, names):
     """Create an interactive figure visualizing all channels from a file."""
 
-    df = pd.read_table(input_file, sep='\t', names=names, skiprows=[0])
+    df = read_raw(input_file)
 
     info = mne.create_info(ch_names=names, sfreq=250, ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)

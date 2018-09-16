@@ -1,6 +1,8 @@
 import click
 import pandas as pd
 
+from ..data.utils import read_raw
+
 
 def get_featues(dframe):
     return dframe[['x0', 'x1', 'x2', 'x3']]
@@ -8,11 +10,6 @@ def get_featues(dframe):
 
 def get_label(dframe):
     return dframe['y']
-
-
-def read_raw_data(fname='data/raw/iris.csv'):
-    dframe = pd.read_csv(fname, header=None)
-    return dframe
 
 
 def preprocess_data(dframe):
