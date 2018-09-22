@@ -7,13 +7,13 @@ from config import (CHANNEL_NAMES, DATA_ROOT, RAW_ROOT, META_FILE_NAME,
 META_COLUMN_NAMES)
 
 
-def df_from_tdt(file_name):
-    df = pd.read_table(file_name, sep='\t', names=CHANNEL_NAMES, skiprows=[0])
+def df_from_tdt(file_path):
+    df = pd.read_table(file_path, sep='\t', names=CHANNEL_NAMES, skiprows=[0])
     return df
 
 
-def df_from_fif(file_name):
-    raw_fif = mne.io.read_raw_fif(os.path.join(PROCESSED_ROOT, file_name))
+def df_from_fif(file_path):
+    raw_fif = mne.io.read_raw_fif(file_path)
     t = pd.DataFrame(raw_fif.get_data())
     df = pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
     return df
@@ -22,6 +22,22 @@ def df_from_fif(file_name):
 def get_meta_df():
     return pd.read_excel(os.path.join(RAW_ROOT, META_FILE_NAME), index_col='ID',
                         names=META_COLUMN_NAMES)
+
+
+def compute_label_thresholds():
+    meta_df = get_meta_df()
+    s = sorted(meta_df['M_1'].values + meta_df['M_4'].values)
+    n = len(s)
+    L = s[n // 3]
+    M = s[2*n // 3]
+
+    return L, M
+
+def get_sfreq(file_name):
+    trial, index = get_trial_index(file_name)
+    meta_df = get_meta_df()
+
+    return meta_df.loc[index]['freq']
 
 def remove_extension(file_path):
     return os.path.splitext(file_path.split(os.sep)[-1])[0] 

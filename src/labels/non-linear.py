@@ -1,47 +1,65 @@
 import nolds
 import pandas as pd
 import logging
+import os
 
-from utils import df_from_fif
-from config import CHANNEL_NAMES
+from data.utils import df_from_fif, get_trial_index, get_meta_df
+from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT
 
-FEATURES = ['lyap', 'corr', 'dfa', 'higu']
+FEATURES = ['lyap', 'corr', 'dfa', 'hurst']
 
 def compute_lyapunov(data):
-    pass
-
+    # When no lag specified, it is found via autocorrelation method
+    lyap = nolds.lyap_r(data, emb_dim=10)
+    return lyap
 
 def compute_corr_dim(data):
-    pass
+    corr_dim = nolds.corr_dim(data, emb_dim=10)
+    return corr_dim
 
 
 def compute_dfa(data):
-    pass
+    dfa = nolds.dfa(data)
+    return dfa
 
 
-def compute_higuchi(data):
-    pass
+def compute_hurst(data):
+    hust = nolds.hurst_rs(data)
+    return hurst
 
 
 def compute_nl(file_path):
     """Compute dict of non-linear features for trial recorded in file_name"""
-    df = df_from_fif(file_name)
-    features = {}
+    df = df_from_fif(file_path)
+    features = []
 
     for channel in CHANNEL_NAMES:
-        lyap = compute_lyapunov(df[channel])
-        corr = compute_corr_dim(df[channel])
-        dfa = compute_dfa(df[channel])
-        higu = compute_higuchi(df[channel])
+        values = df[channel].values
+        lyap = compute_lyapunov(values)
+        corr = compute_corr_dim(values)
+        dfa = compute_dfa(values)
+        hurst = compute_hurst(values)
 
-        features[channel] = [lyap, corr, dfa, higu]
+        features.extend([lyap, corr, dfa, hurst])
 
     return features
 
 
 def compute_label(file_path):
-    #TODO
-    pass
+    trial, index = get_trial_index(file_path)
+    meta_df = get_meta_df()
+    col = 'M_1' if trial == 'a' else 'M_4'
+    label = meta_df.loc[index][col]
+
+    # Precomputed label thresholds
+    L, M = 38, 48
+
+    if label <= L:
+        return 'L'
+    elif label <= M:
+        return 'M'
+    else:
+        return 'H'
 
 
 def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
@@ -52,24 +70,24 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     main_df = pd.DataFrame(columns=cols)
 
     for file_name in os.listdir(input_path):
+
         if not file_name.endswith('.fif'):
             logging.info('Skipping file %s' % file_name)
             continue
+
         file_path = os.path.join(input_path, file_name)
 
         features = compute_nl(file_path)
         label = compute_label(file_path)
 
-        df = pd.DataFrame(features + [label], columns=cols)
-        main_df = main_df.append(df, ignore_index=True)
+        main_df = main_df.append(features + [label], ignore_index=True)
 
     logging.info('Saving training data as pickle...')
     main_df.to_pickle(output_path)
 
 
-@click.command()
 def main():
-    pass
+    create_training_data()
 
 if __name__ == '__main__':
     main()

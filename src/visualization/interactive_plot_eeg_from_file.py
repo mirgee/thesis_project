@@ -1,43 +1,55 @@
 import logging
 import os
+import random as rd
 
 import click
 import mne
 import pandas as pd
 import numpy as np
 
-from ..config import CHANNEL_NAMES, DATA_ROOT
-from ..data.utils import read_raw
+from config import CHANNEL_NAMES, DATA_ROOT, PROCESSED_ROOT, RAW_ROOT
+from data.utils import df_from_fif, df_from_tdt, get_sfreq
 
-def interactive_plot(input_file, names):
+def interactive_plot(input_file, kind, apply_proj=False):
     """Create an interactive figure visualizing all channels from a file."""
+    df = df_from_fif(input_file) if kind=='PROCESSED' else \
+        df_from_tdt(input_file)
 
-    df = read_raw(input_file)
-
-    info = mne.create_info(ch_names=names, sfreq=250, ch_types='eeg')
+    sfreq = get_sfreq(input_file)
+    info = mne.create_info(ch_names=CHANNEL_NAMES, sfreq=sfreq, ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)
 
-    data.set_eeg_reference('average', projection=True)
-    data.apply_proj()
+    logging.info(f'Plotting file {input_file} of kind={kind}, sfreq={sfreq}')
 
-    fig = data.plot(block=True, lowpass=40, scalings='auto')
+    if apply_proj:
+        data.set_eeg_reference('average', projection=True)
+        data.apply_proj()
+
+    fig = data.plot(block=True, scalings='auto')
     fig.set_size_inches(18.5, 10.5, forward=True)
 
     return fig
 
+
+def examine_all(kind='RAW', proj=False):
+    input_folder = PROCESSED_ROOT if kind=='PROCESSED' else RAW_ROOT
+
+    to_examine = os.listdir(input_folder)
+    rd.shuffle(to_examine)
+
+    for file_name in to_examine:
+        interactive_plot(os.path.join(input_folder, file_name), kind, proj)
+
 @click.command()
-@click.argument('input_file', type=click.Path(exists=False, dir_okay=False))
-@click.option('--output_file', type=click.Path(writable=True, dir_okay=False),
-              default=None)
-def main(input_file, output_file=None):
+@click.option('--kind', type=str, default='RAW')
+@click.option('--proj', type=bool, default=False)
+def main(kind, proj):
     logger = logging.getLogger(__name__)
-    logger.info("Plotting EEG singals from {input_file} to {output_file}...")
+    logging.basicConfig(level=logging.INFO)
 
-    input_file_abs = os.path.abspath(os.path.join(DATA_ROOT, input_file))
+    logger.info(f'Plotting EEG singals of kind {kind}...')
 
-    fig = interactive_plot(input_file_abs, CHANNEL_NAMES)
-    if output_file:
-        fig.save(output_file)
+    examine_all(kind, proj)
 
 if __name__ == '__main__':
     main()

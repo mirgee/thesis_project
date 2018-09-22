@@ -13,6 +13,31 @@ def read_processed(file_name):
     return None
 
 
+def remove_outliers(data, alpha):
+    mean = np.mean(data, axis=0)
+    std = np.std(data, axis=0)
+
+    attempts = 0
+    while attempts < 100:
+        alpha = 0.1
+        outliers = [x for x in data if mean-alpha*std < x < mean+alpha*std]
+
+        percent = len(outliers) / len(data)
+
+        if percent < 0.07:
+            data = np.array([x for x,i in enumerate(data) if x not in outliers or
+                             i==0 else (data[i-1]+data[i+1])/2])
+            break
+        else:
+            alpha *= 1.5
+            attempts += 1
+    else:
+        raise Exception('Failed to eliminate outliers')
+
+    return data
+
+
+
 def preprocess_raw(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
     for file_name in os.listdir(input_path):
         if not file_name.endswith('.tdt'):
@@ -20,6 +45,10 @@ def preprocess_raw(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
             continue
         file_path = os.path.join(input_path, file_name)
         mne_raw_data = raw_mne_from_tdt(file_path)
+
+        # Apply averaging projection (remove outliers)
+        data.set_eeg_reference('average', projection=True)
+        data.apply_proj()
 
         # Remove power line noise, may not be necessary depending on the data
         mne_raw_data.notch_filter(np.arange(50, 125, 50), filter_length='auto', phase='zero')
@@ -36,7 +65,8 @@ def preprocess_raw(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
             mne_raw_data.resample(250, npad="auto")
 
         processed_file_name = remove_extension(file_name) + '.fif'
-        mne_raw_data.save(os.path.join(output_file, processed_file_name))
+        mne_raw_data.save(os.path.join(output_file, processed_file_name),
+                          proj=True)
 
 
 @click.command()
