@@ -9,10 +9,6 @@ from data.utils import raw_mne_from_tdt, remove_extension
 from config import RAW_ROOT, PROCESSED_ROOT
 
 
-def read_processed(file_name):
-    return None
-
-
 def remove_outliers(data, alpha):
     mean = np.mean(data, axis=0)
     std = np.std(data, axis=0)
@@ -73,6 +69,9 @@ def preprocess_raw(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
 @click.option('--input_folder', type=click.Path(exists=True, readable=True, dir_okay=False))
 @click.option('--output_folder', type=click.Path(writable=True, dir_okay=False))
 def main(input_folder, output_folder):
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
+
     logging.info('Preprocessing data')
 
     preprocess_raw()

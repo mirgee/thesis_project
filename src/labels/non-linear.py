@@ -2,14 +2,17 @@ import nolds
 import pandas as pd
 import logging
 import os
+import numpy as np
 
 from data.utils import df_from_fif, get_trial_index, get_meta_df
 from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT
+from lib.nolitsa.dimension import fnn
 
 FEATURES = ['lyap', 'corr', 'dfa', 'hurst']
 
 def compute_lyapunov(data):
     # When no lag specified, it is found via autocorrelation method
+    m = compute_embedding_dimension(data)
     lyap = nolds.lyap_r(data, emb_dim=10)
     return lyap
 
@@ -26,6 +29,15 @@ def compute_dfa(data):
 def compute_hurst(data):
     hust = nolds.hurst_rs(data)
     return hurst
+
+
+def compute_embedding_dimension(data):
+    dims_to_try = np.arange(1, 15)
+    fnns = fnn(data, dim=dims_to_try)
+    # Return the dimension with lowest number of FNN with both tests applied
+    m = np.argmin(fnns[2])
+    logging.info(f'Choosing dimension {m}')
+    return m
 
 
 def compute_nl(file_path):
@@ -87,6 +99,9 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
 
 def main():
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
+
     create_training_data()
 
 if __name__ == '__main__':
