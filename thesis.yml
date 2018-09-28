@@ -148,7 +148,6 @@ dependencies:
   - zlib=1.2.11=ha838bed_2
   - zope=1.0=py36_0
   - pip:
-    - htmresearch==0.0.3.dev0
     - nolds==0.4.1
     - watermark==1.6.1
 prefix: /home/miroslav/anaconda3/envs/thesis

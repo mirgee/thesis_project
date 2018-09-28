@@ -97,7 +97,8 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
         main_df = main_df.append(features + [label], ignore_index=True)
 
     logging.info('Saving training data as pickle...')
-    main_df.to_pickle(output_path)
+    pickle_name = 'training.pickle'
+    main_df.to_pickle(os.path.join(output_path, pickle_name))
 
 
 def main():
