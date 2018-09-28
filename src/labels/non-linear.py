@@ -9,15 +9,17 @@ from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT
 from lib.nolitsa.dimension import fnn
 
 FEATURES = ['lyap', 'corr', 'dfa', 'hurst']
+EMBED_DIM = 10
 
-def compute_lyapunov(data):
-    # When no lag specified, it is found via autocorrelation method
-    m = compute_embedding_dimension(data)
-    lyap = nolds.lyap_r(data, emb_dim=10)
+def compute_lyapunov(data, use_fnn=False):
+    if use_fnn:
+        # When no lag specified, it is found via autocorrelation method
+        m = compute_embedding_dimension(data)
+    lyap = nolds.lyap_r(data, emb_dim=EMBED_DIM)
     return lyap
 
 def compute_corr_dim(data):
-    corr_dim = nolds.corr_dim(data, emb_dim=10)
+    corr_dim = nolds.corr_dim(data, emb_dim=EMBED_DIM)
     return corr_dim
 
 
@@ -27,7 +29,7 @@ def compute_dfa(data):
 
 
 def compute_hurst(data):
-    hust = nolds.hurst_rs(data)
+    hurst = nolds.hurst_rs(data)
     return hurst
 
 

@@ -1,8 +1,8 @@
-import click
 import pandas as pd
 import numpy as np
 import logging
 import os
+import click
 
 from data.utils import raw_mne_from_tdt, remove_extension
 
@@ -22,7 +22,7 @@ def remove_outliers(data, alpha):
 
         if percent < 0.07:
             data = np.array([x for x,i in enumerate(data) if x not in outliers or
-                             i==0 else (data[i-1]+data[i+1])/2])
+                             i==0])
             break
         else:
             alpha *= 1.5
@@ -43,8 +43,8 @@ def preprocess_raw(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
         mne_raw_data = raw_mne_from_tdt(file_path)
 
         # Apply averaging projection (remove outliers)
-        data.set_eeg_reference('average', projection=True)
-        data.apply_proj()
+        mne_raw_data.set_eeg_reference('average', projection=True)
+        mne_raw_data.apply_proj()
 
         # Remove power line noise, may not be necessary depending on the data
         mne_raw_data.notch_filter(np.arange(50, 125, 50), filter_length='auto', phase='zero')
