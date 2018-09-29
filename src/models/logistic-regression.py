@@ -16,7 +16,8 @@ TEST_SIZE = 0.3
 
 
 def train(X_train, y_train):
-    logreg = LogisticRegression()
+    # C is inverse of regularization strength
+    logreg = LogisticRegression(C=1e5, solver='lbgfs', multi_class='multinomial')
     logreg.fit(X_train, y_train)
 
     return logreg
