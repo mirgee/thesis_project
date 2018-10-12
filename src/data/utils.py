@@ -33,11 +33,13 @@ def compute_label_thresholds():
 
     return L, M
 
+
 def get_sfreq(file_name):
     trial, index = get_trial_index(file_name)
     meta_df = get_meta_df()
 
     return meta_df.loc[index]['freq']
+
 
 def remove_extension(file_path):
     return os.path.splitext(file_path.split(os.sep)[-1])[0] 
@@ -47,9 +49,20 @@ def get_trial_index(file_path):
     no_ext_file_name = remove_extension(file_path)
 
     trial_num = no_ext_file_name[-1]
-    index = int(no_ext_file_name[:-1])
+    index = no_ext_file_name[:-1]
 
-    return trial_num, index
+    return trial_num, int(index), '-'.join((trial_num, index))
+
+
+def get_trials(input_path):
+    trials = []
+    for file_name in os.listdir(input_path):
+        if not file_name.endswith('.fif'):
+            continue
+        _, _, trial_index = get_trial_index(file_name)
+        trials.append(trial_index)
+    return trials
+
 
 def raw_mne_from_tdt(file_path):
     assert(file_path.endswith('.tdt'))
