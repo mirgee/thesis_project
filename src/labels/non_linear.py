@@ -3,9 +3,10 @@ import pandas as pd
 import logging
 import os
 import numpy as np
+import mne
 
-from data.utils import df_from_fif, get_trial_index, get_meta_df
-from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT
+from data.utils import df_from_fif, get_trial_index, get_meta_df, get_trials
+from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT, RAW_ROOT
 from lib.nolitsa.dimension import fnn
 
 FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst']
@@ -51,18 +52,18 @@ def compute_embedding_dimension(data):
 def compute_nl(file_path):
     """Compute dict of non-linear features for trial recorded in file_name"""
     df = df_from_fif(file_path)
-    features = []
+    new_row = {}
 
     for channel in CHANNEL_NAMES:
         values = df[channel].values
-        lyap = compute_lyapunov(values)
-        corr = compute_corr_dim(values)
-        dfa = compute_dfa(values)
-        hurst = compute_hurst(values)
+        new_row.update({
+            (channel, 'lyap'): compute_lyapunov(values),
+            (channel, 'corr'): compute_corr_dim(values),
+            (channel, 'dfa'): compute_dfa(values),
+            (channel, 'hurst'): compute_hurst(values),
+        })
 
-        features.extend([lyap, corr, dfa, hurst])
-
-    return features
+    return new_row
 
 
 def compute_label(file_path):
@@ -86,11 +87,10 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data...')
 
-    idx_name = 'trials'
-    cols = ([idx_name] +
-            ['-'.join((f, c)) for c in CHANNEL_NAMES for f in FEATURES] +
-            ['label'])
-    main_df = pd.DataFrame(columns=cols, index=idx_name)
+    cols = pd.MultiIndex.from_product([CHANNEL_NAMES, FEATURE_NAMES],
+                                      names=['channel', 'feature'])
+    trials = get_trials(RAW_ROOT)
+    main_df = pd.DataFrame(columns=cols, index=trials)
 
     for file_name in os.listdir(input_path):
         if not file_name.endswith('.fif'):
@@ -99,14 +99,14 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
         file_path = os.path.join(input_path, file_name)
 
-        features = compute_nl(file_path)
-        label = compute_label(file_path)
+        new_row = compute_nl(file_path)
 
-        logging.info("Computed vector of features %s" % features + [label])
+        logging.info("Computed row of features: \n%s" % new_row)
 
         _, _, trial = get_trial_index(file_name)
         main_df.append(
-            pd.Series([trial] + features + [label], name=trial))
+            pd.Series(new_row, name=trial))
+        logging.debug("Training dataframe after adding a row: \n%s" % main_df)
 
     logging.info('Saving training data as pickle...')
     pickle_name = 'training.pickle'
@@ -119,6 +119,7 @@ def main():
     mne.set_log_level(logging.WARNING)
 
     create_training_data()
+
 
 if __name__ == '__main__':
     main()
