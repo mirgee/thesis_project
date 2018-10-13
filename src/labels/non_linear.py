@@ -86,11 +86,13 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data...')
 
-    cols = ['-'.join((f,c)) for c in CHANNEL_NAMES for f in FEATURES] + ['label']
-    main_df = pd.DataFrame(columns=cols)
+    idx_name = 'trials'
+    cols = ([idx_name] +
+            ['-'.join((f, c)) for c in CHANNEL_NAMES for f in FEATURES] +
+            ['label'])
+    main_df = pd.DataFrame(columns=cols, index=idx_name)
 
     for file_name in os.listdir(input_path):
-
         if not file_name.endswith('.fif'):
             logging.info('Skipping file %s' % file_name)
             continue
@@ -102,7 +104,9 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
         logging.info("Computed vector of features %s" % features + [label])
 
-        main_df = main_df.append(features + [label], ignore_index=True)
+        _, _, trial = get_trial_index(file_name)
+        main_df.append(
+            pd.Series([trial] + features + [label], name=trial))
 
     logging.info('Saving training data as pickle...')
     pickle_name = 'training.pickle'
@@ -111,7 +115,7 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
 def main():
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.WARNING)
 
     create_training_data()
