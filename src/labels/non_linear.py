@@ -3,9 +3,10 @@ import pandas as pd
 import logging
 import os
 import numpy as np
+import mne
 
-from data.utils import df_from_fif, get_trial_index, get_meta_df
-from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT
+from data.utils import df_from_fif, get_trial_index, get_meta_df, get_trials
+from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT, RAW_ROOT
 from lib.nolitsa.dimension import fnn
 
 FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst']
@@ -86,11 +87,14 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data...')
 
-    cols = ['-'.join((f,c)) for c in CHANNEL_NAMES for f in FEATURES] + ['label']
-    main_df = pd.DataFrame(columns=cols)
+    idx_name = 'trials'
+    cols = ([idx_name] +
+            ['-'.join((f, c)) for c in CHANNEL_NAMES for f in FEATURE_NAMES] +
+            ['label'])
+    trials = get_trials(RAW_ROOT)
+    main_df = pd.DataFrame(columns=cols, index=trials)
 
     for file_name in os.listdir(input_path):
-
         if not file_name.endswith('.fif'):
             logging.info('Skipping file %s' % file_name)
             continue
@@ -102,7 +106,10 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
         logging.info("Computed vector of features %s" % features + [label])
 
-        main_df = main_df.append(features + [label], ignore_index=True)
+        _, _, trial = get_trial_index(file_name)
+        main_df.append(
+            pd.Series(features + [label], name=trial))
+        logging.debug("Training dataframe after adding a row: \n%s" % main_df)
 
     logging.info('Saving training data as pickle...')
     pickle_name = 'training.pickle'
@@ -111,7 +118,7 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
 
 def main():
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.WARNING)
 
     create_training_data()
