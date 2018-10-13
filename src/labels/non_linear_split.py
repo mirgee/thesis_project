@@ -10,16 +10,19 @@ from labels.non_linear import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
                                compute_hurst, compute_lyapunov)
 
 
-def _append_features(trial, channel, features, chunk, chunk_num, df):
+def _features_for_channel_chunk(trial, features, chunk, chunk_num):
+    row = {}
+    # TODO: Make a mapping of {feat_name: function} and just loop through it
     if 'lyap' in features:
-        df.loc[(trial, channel), ('lyap', chunk_num)] = compute_lyapunov(chunk)
+        row.update({('lyap', chunk_num): compute_lyapunov(chunk)})
     if 'corr' in features:
-        df.loc[(trial, channel), ('corr', chunk_num)] = compute_corr_dim(chunk)
+        row.update({('corr', chunk_num): compute_corr_dim(chunk)})
     if 'dfa' in features:
-        df.loc[(trial, channel), ('dfa', chunk_num)] = compute_dfa(chunk)
+        row.update({('dfa', chunk_num): compute_dfa(chunk)})
     if 'hurst' in features:
-        df.loc[(trial, channel), ('hurst', chunk_num)] = compute_hurst(chunk)
-    return df
+        row.update({('hurst', chunk_num): compute_hurst(chunk)})
+
+    return row
 
 
 def _create_df(input_path, feature_names):
@@ -27,25 +30,32 @@ def _create_df(input_path, feature_names):
     index = pd.MultiIndex.from_product([trials, CHANNEL_NAMES],
                                        names=['trial', 'channel'])
     cols = pd.MultiIndex.from_product([feature_names,
-                                       range(len(feature_names))],
+                                       range(len(feature_names)+1)],
                                       names=['feature', 'chunk'])
     return pd.DataFrame(columns=cols, index=index)
 
 
-def compute_nl_split(splits, feature_names, trial, df, df_in,
+def compute_nl_split(splits, feature_names, trial, df_in, df_out,
                      compute_overall=False):
     for channel in CHANNEL_NAMES:
         values = df_in[channel].values
         n = len(values)
+        # TODO: We will have to compute all chunks, save them in multiindexed
+        # series, and then append to the dataframe
         for split in range(splits):
             chunk = values[split*(n//splits):(split+1)*(n//splits)]
-            df = _append_features(
-                trial, channel, feature_names, chunk, split, df)
+            new_row = _features_for_channel_chunk(
+                trial, feature_names, chunk, split)
+            logging.info("Adding row: \n %s" % new_row)
 
         if compute_overall:
-            df = _append_features(
-                trial, channel, feature_names, values, split, df)
-    return df
+            new_row.update(
+                _features_for_channel_chunk(
+                    trial, feature_names, values, len(splits)))
+        df_out.append(
+            pd.Series(new_row, name=(trial, channel)))
+
+    return df_out
 
 
 def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
@@ -64,12 +74,10 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
         _, _, trial = get_trial_index(file_name)
         df_in = df_from_fif(file_path)
 
-        df = compute_nl_split(4, feature_names, trial, df, df_in)
-
-        logging.info("Currently added row: \n %s" % df.tail(1))
+        df = compute_nl_split(4, feature_names, trial, df_in, df)
 
     logging.info('Saving training data as pickle...')
-    df.to_pickle(os.path.join(output_path, ))
+    df.to_pickle(os.path.join(output_path, 'splits.pickle'))
 
 
 def main():
