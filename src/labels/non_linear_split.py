@@ -40,21 +40,17 @@ def compute_nl_split(splits, feature_names, trial, df_in, df_out,
     for channel in CHANNEL_NAMES:
         values = df_in[channel].values
         n = len(values)
-        # TODO: We will have to compute all chunks, save them in multiindexed
-        # series, and then append to the dataframe
+        new_row = {}
         for split in range(splits):
             chunk = values[split*(n//splits):(split+1)*(n//splits)]
-            new_row = _features_for_channel_chunk(
-                trial, feature_names, chunk, split)
-            logging.info("Adding row: \n %s" % new_row)
-
+            new_row.update(_features_for_channel_chunk(
+                trial, feature_names, chunk, split))
         if compute_overall:
             new_row.update(
                 _features_for_channel_chunk(
                     trial, feature_names, values, len(splits)))
-        df_out.append(
-            pd.Series(new_row, name=(trial, channel)))
-
+        df_out.loc[(trial, channel)] = pd.Series(new_row)
+        logging.debug("Adding row: \n %s" % df_out.loc[(trial, channel)])
     return df_out
 
 
@@ -81,7 +77,7 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.WARNING)
 
     create_split_data()

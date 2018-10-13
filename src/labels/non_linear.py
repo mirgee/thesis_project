@@ -96,16 +96,10 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
         if not file_name.endswith('.fif'):
             logging.info('Skipping file %s' % file_name)
             continue
-
         file_path = os.path.join(input_path, file_name)
-
         new_row = compute_nl(file_path)
-
-        logging.info("Computed row of features: \n%s" % new_row)
-
         _, _, trial = get_trial_index(file_name)
-        main_df.append(
-            pd.Series(new_row, name=trial))
+        main_df.loc[trial] = pd.Series(new_row)
         logging.debug("Training dataframe after adding a row: \n%s" % main_df)
 
     logging.info('Saving training data as pickle...')
