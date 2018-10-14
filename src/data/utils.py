@@ -64,15 +64,18 @@ def get_trials(input_path):
     return trials
 
 
+def get_sampling_frequency(file_path):
+    meta_df = get_meta_df()
+    trial_num, index, _ = get_trial_index(file_path)
+    return meta_df.iloc[index-1]['freq']
+
+
 def raw_mne_from_tdt(file_path):
     assert(file_path.endswith('.tdt'))
-    meta_df = get_meta_df()
-    trial_num, index = get_trial_index(file_path)
-    sampling_freq = meta_df.iloc[index-1]['freq']
-    
+    sampling_freq = get_sampling_frequency(file_path)
+
     df = df_from_tdt(file_path)
     info = mne.create_info(ch_names=CHANNEL_NAMES, sfreq=sampling_freq,
-                           ch_types = 'eeg')
+                           ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)
     return data
-
