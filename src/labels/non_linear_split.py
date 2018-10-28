@@ -5,7 +5,7 @@ import pandas as pd
 
 import mne
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT
-from data.utils import df_from_fif, get_trial_index, get_trials
+from data.utils import df_from_fif, get_trial_index, get_trials, get_duration
 from labels.non_linear import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
                                compute_hurst, compute_lyapunov)
 

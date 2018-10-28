@@ -13,11 +13,13 @@ def df_from_tdt(file_path, seconds=None):
     return df.iloc[:n]
 
 
-def df_from_fif(file_path):
+def df_from_fif(file_path, seconds=None):
     raw_fif = mne.io.read_raw_fif(file_path)
     t = pd.DataFrame(raw_fif.get_data())
     df = pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
-    return df
+    n = len(df) if seconds is None else get_recording_length(file_path,
+                                                             seconds)
+    return df.iloc[:n]
 
 
 def get_meta_df():
