@@ -3,25 +3,44 @@ import numpy as np
 import mne
 import os
 
-from config import (CHANNEL_NAMES, DATA_ROOT, RAW_ROOT, META_FILE_NAME,
-META_COLUMN_NAMES)
+from config import (CHANNEL_NAMES, RAW_ROOT, META_FILE_NAME, META_COLUMN_NAMES)
 
 
-def df_from_tdt(file_path):
+def df_from_tdt(file_path, seconds=None):
     df = pd.read_table(file_path, sep='\t', names=CHANNEL_NAMES, skiprows=[0])
-    return df
+    n = len(df) if seconds is None else get_recording_length(file_path, df,
+                                                             seconds)
+    return df.iloc[:n]
 
 
-def df_from_fif(file_path):
+def df_from_fif(file_path, seconds=None):
     raw_fif = mne.io.read_raw_fif(file_path)
     t = pd.DataFrame(raw_fif.get_data())
     df = pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
-    return df
+    n = len(df) if seconds is None else get_recording_length(file_path, df,
+                                                             seconds)
+    return df.iloc[:n]
 
 
 def get_meta_df():
     return pd.read_excel(os.path.join(RAW_ROOT, META_FILE_NAME), index_col='ID',
-                        names=META_COLUMN_NAMES)
+                         names=META_COLUMN_NAMES)
+
+
+def get_recording_length(file_path, df, seconds):
+    duration = get_duration(file_path, df)
+    if duration < seconds:
+        raise Exception(f'Recording duration {duration} s is less than desired'
+                        f'{seconds} s.')
+    sfreq = get_sampling_frequency(file_path)
+    return seconds*sfreq
+
+
+def get_duration(file_path, df):
+    num_rows = len(df.index)
+    sfreq = get_sampling_frequency(file_path)
+    _, _, trial = get_trial_index(file_path)
+    return (num_rows-1)/sfreq
 
 
 def compute_label_thresholds():
@@ -34,15 +53,8 @@ def compute_label_thresholds():
     return L, M
 
 
-def get_sfreq(file_name):
-    trial, index = get_trial_index(file_name)
-    meta_df = get_meta_df()
-
-    return meta_df.loc[index]['freq']
-
-
 def remove_extension(file_path):
-    return os.path.splitext(file_path.split(os.sep)[-1])[0] 
+    return os.path.splitext(file_path.split(os.sep)[-1])[0]
 
 
 def get_trial_index(file_path):

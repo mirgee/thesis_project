@@ -5,7 +5,7 @@ import pandas as pd
 
 import mne
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT
-from data.utils import df_from_fif, get_trial_index, get_trials
+from data.utils import df_from_fif, get_trial_index, get_trials, get_duration
 from labels.non_linear import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
                                compute_hurst, compute_lyapunov)
 
@@ -68,7 +68,13 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
 
         file_path = os.path.join(input_path, file_name)
         _, _, trial = get_trial_index(file_name)
-        df_in = df_from_fif(file_path)
+        try:
+            df_in = df_from_fif(file_path, 60)
+        except Exception:
+            duration = get_duration(file_path)
+            logging.info(f'Skipping file {file_name} with duration {duration}'
+                         f' s.')
+            continue
 
         df = compute_nl_split(4, feature_names, trial, df_in, df)
 
