@@ -69,10 +69,11 @@ def get_trial_index(file_path):
 def get_trials(input_path):
     trials = []
     for file_name in os.listdir(input_path):
-        if not file_name.endswith('.fif'):
+        if not file_name.endswith('.fif') and not file_name.endswith('.tdt'):
             continue
         _, _, trial_index = get_trial_index(file_name)
         trials.append(trial_index)
+    assert trials
     return trials
 
 

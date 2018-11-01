@@ -1,12 +1,14 @@
-import nolds
-import pandas as pd
 import logging
 import os
-import numpy as np
-import mne
 
-from data.utils import df_from_fif, get_trial_index, get_meta_df, get_trials
-from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT, RAW_ROOT
+import click
+import numpy as np
+import pandas as pd
+
+import mne
+import nolds
+from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
+from data.utils import df_from_fif, get_meta_df, get_trial_index, get_trials
 from lib.nolitsa.dimension import fnn
 
 FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst']
@@ -66,7 +68,7 @@ def compute_nl(file_path):
     return new_row
 
 
-def compute_label(file_path):
+def compute_three_class_label(file_path):
     trial, index, _ = get_trial_index(file_path)
     meta_df = get_meta_df()
     col = 'M_1' if trial == 'a' else 'M_4'
@@ -81,6 +83,29 @@ def compute_label(file_path):
         return 'M'
     else:
         return 'H'
+
+
+def compute_binary_label(file_path):
+    trial, index, _ = get_trial_index(file_path)
+    meta_df = get_meta_df()
+    return meta_df.loc[index]['RESP_4W']
+
+
+def create_labels(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
+    logging.info('Creating labels...')
+    trials = get_trials(RAW_ROOT)
+    print(RAW_ROOT)
+    labels_df = pd.DataFrame(columns=['label'], index=trials)
+    for file_name in os.listdir(input_path):
+        if not file_name.endswith('.fif'):
+            logging.info('Skipping file %s' % file_name)
+            continue
+        file_path = os.path.join(input_path, file_name)
+        _, _, trial = get_trial_index(file_name)
+        labels_df.loc[trial]['label'] = compute_binary_label(file_path)
+    logging.info('Saving label data as pickle...')
+    pickle_name = 'labels.pickle'
+    labels_df.to_pickle(os.path.join(output_path, pickle_name))
 
 
 def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
@@ -107,12 +132,17 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     main_df.to_pickle(os.path.join(output_path, pickle_name))
 
 
-def main():
+@click.command()
+@click.option('--labels', is_flag=True)
+def main(labels):
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.WARNING)
 
-    create_training_data()
+    if labels:
+        create_labels()
+    else:
+        create_training_data()
 
 
 if __name__ == '__main__':
