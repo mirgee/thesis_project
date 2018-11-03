@@ -6,8 +6,8 @@ import pandas as pd
 import mne
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT
 from data.utils import df_from_fif, get_trial_index, get_trials, get_duration
-from labels.non_linear import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
-                               compute_hurst, compute_lyapunov)
+from labels.utils import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
+                          compute_hurst, compute_lyapunov)
 
 
 def _features_for_channel_chunk(trial, features, chunk, chunk_num):
@@ -62,7 +62,7 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
     df = _create_df(input_path, feature_names)
 
     for file_name in os.listdir(input_path):
-        if not file_name.endswith('.fif'):
+        if not (file_name.endswith('.fif') or file_name.endswith('.tdt')):
             logging.info('Skipping file %s' % file_name)
             continue
 
@@ -70,7 +70,7 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
         _, _, trial = get_trial_index(file_name)
         try:
             df_in = df_from_fif(file_path, 60)
-        except Exception:
+        except IndexError:
             duration = get_duration(file_path)
             logging.info(f'Skipping file {file_name} with duration {duration}'
                          f' s.')

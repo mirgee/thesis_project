@@ -30,8 +30,7 @@ def get_meta_df():
 def get_recording_length(file_path, df, seconds):
     duration = get_duration(file_path, df)
     if duration < seconds:
-        raise Exception(f'Recording duration {duration} s is less than desired'
-                        f'{seconds} s.')
+        raise IndexError
     sfreq = get_sampling_frequency(file_path)
     return seconds*sfreq
 
