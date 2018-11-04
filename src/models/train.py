@@ -1,11 +1,13 @@
 import logging
 import os
+from random import randint
 
 import click
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn import datasets, metrics, svm
+from sklearn.feature_selection import SelectFromModel
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (classification_report, confusion_matrix,
                              roc_auc_score, roc_curve)
@@ -14,18 +16,7 @@ from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 from config import LABELED_ROOT, VISUAL_ROOT
 
-TEST_SIZE = 0.3
-
-
-def train_lr(X_train, y_train):
-    # C is inverse of regularization strength
-    logreg = LogisticRegression(C=1e5, solver='lbgfs', multi_class='multinomial')
-    return logreg.fit(X_train, y_train)
-
-
-def train_svm(X_train, y_train):
-    svm = svm.SVC(kernel='rbf', gamma='scale')
-    return svm.fit(X_train, y_train)
+TEST_SIZE = 0.2
 
 
 def summary(X, y):
@@ -35,24 +26,24 @@ def summary(X, y):
     logging.info(f'Summary for logistic regression classifier: \n{summary}')
 
 
-def evaluate(model, X_test, y_test, y_pred):
+def evaluate(model, X_test, y_test):
     logging.info('Evaluating classifier...')
 
     y_pred = model.predict(X_test)
     logging.info('Accuracy on the test set: {:.2f}'.format(model.score(
         X_test, y_test)))
 
-    confusion_matrix = confusion_matrix(y_test, y_pred)
-    logging.info(f'Confusion matrix: \n{confusion_matrix}')
+    cmatrix = confusion_matrix(y_test, y_pred)
+    logging.info(f'Confusion matrix: \n{cmatrix}')
 
     report = classification_report(y_test, y_pred)
     logging.info(f'Classification report: \n{report}')
 
 
-def plot_roc_curve(X_test, y_test):
-    logit_roc_auc = roc_auc_score(y_test, logreg.predict(X_test))
+def plot_roc_curve(clf, X_test, y_test):
+    logit_roc_auc = roc_auc_score(y_test, clf.predict(X_test))
     fpr, tpr, thresholds = roc_curve(
-        y_test, logreg.predict_proba(X_test)[:, 1])
+        y_test, clf.predict_proba(X_test)[:, 1])
 
     plt.figure()
     plt.plot(fpr, tpr, label='Logistic Regression (area = %0.2f)' % logit_roc_auc)
@@ -68,48 +59,69 @@ def plot_roc_curve(X_test, y_test):
     plt.show()
 
 
-def train(classifier):
+def select_features(n, clf, X_train, y_train):
+    logging.info('Selecting features...')
+
+    sfm = SelectFromModel(clf, threshold=0.25)
+    sfm.fit(X_train, y_train)
+    n_features = sfm.transform(X_train).shape[1]
+    while n_features > n:
+        sfm.threshold += 0.1
+        X_transform = sfm.transform(X_train)
+        n_features = X_transform.shape[1]
+    return X_transform, sfm.get_support()
+
+
+def train(clf_name):
     logging.info('Performing logistic regression on the dataset...')
 
     df_X = pd.read_pickle(os.path.join(LABELED_ROOT, 'splits.pickle'))
     # Feature selection
     rows = [row for row in df_X.index if row[0].startswith('b')]
     # Only total param
-    df_X.loc[rows, (slice(None), [4], slice(None))].unstack()
+    df_X = df_X.loc[rows, (slice(None), [4], slice(None))].unstack().dropna()
 
-    df_X = df_X[['lyap', 'corr', 'dfa', 'hurst']][4]
     df_y = pd.read_pickle(os.path.join(LABELED_ROOT, 'labels.pickle'))
     df = df_X.join(df_y)
 
     logging.info(f'The dataframe used for training: \n{df}')
 
-    X = df.values[:-1]
-    y = df.values[-1]
+    X = df.loc[:, df.columns != 'label'].values
+    y = df.loc[:, 'label'].values
+    y = y.astype('int')
 
     # summary(X, y)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=TEST_SIZE,
-                                                        random_state=0)
-    if classifier == 'logistic-regression':
-        model = train_lr(X_train, y_train)
-    elif classifier == 'svm':
-        model = train_svm(X_train, y_train)
+    X_train, X_test, y_train, y_test = \
+        train_test_split(
+            X, y, test_size=TEST_SIZE, random_state=randint(0, 1000))
+    if clf_name == 'logistic-regression':
+        clf = LogisticRegression(C=1e5, solver='lbfgs', multi_class='multinomial')
+    elif clf_name == 'svm':
+        clf = svm.SVC(kernel='rbf', gamma='scale')
     else:
-        raise NotImplemented(f'Classifier {classifier} not implemented.')
+        raise NotImplemented(f'Classifier {clf} not implemented.')
 
-    evaluate(model, X_test, y_test, y_pred)
+    X_train, supp = select_features(8, clf, X_train, y_train)
+    X_test = X_test[:, supp]
 
-    plot_roc_curve(X_test, y_test)
+    logging.info('Selected features: {}'.format(
+        [x for x, s in zip(list(df.columns), supp) if s]))
+
+    model = clf.fit(X_train, y_train)
+
+    evaluate(model, X_test, y_test)
+
+    plot_roc_curve(clf, X_test, y_test)
 
 
 @click.command()
-@click.argument('classifier', default='logistic-regression')
-def main(classifier, input_path=LABELED_ROOT):
+@click.argument('clf_name', default='logistic-regression')
+def main(clf_name, input_path=LABELED_ROOT):
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
 
-    train(classifier)
+    train(clf_name)
 
 
 if __name__ == '__main__':
