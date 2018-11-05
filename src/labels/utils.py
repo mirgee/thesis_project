@@ -1,12 +1,14 @@
-import nolds
-import pandas as pd
 import logging
 import os
-import numpy as np
-import mne
 
-from data.utils import df_from_fif, get_trial_index, get_meta_df, get_trials
-from config import CHANNEL_NAMES, PROCESSED_ROOT, LABELED_ROOT, RAW_ROOT
+import click
+import numpy as np
+import pandas as pd
+
+import mne
+import nolds
+from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
+from data.utils import df_from_fif, get_meta_df, get_trial_index, get_trials
 from lib.nolitsa.dimension import fnn
 
 FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst']
@@ -66,23 +68,6 @@ def compute_nl(file_path):
     return new_row
 
 
-def compute_label(file_path):
-    trial, index, _ = get_trial_index(file_path)
-    meta_df = get_meta_df()
-    col = 'M_1' if trial == 'a' else 'M_4'
-    label = meta_df.loc[index][col]
-
-    # Precomputed label thresholds
-    L, M = 38, 48
-
-    if label <= L:
-        return 'L'
-    elif label <= M:
-        return 'M'
-    else:
-        return 'H'
-
-
 def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data...')
@@ -105,15 +90,3 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     logging.info('Saving training data as pickle...')
     pickle_name = 'training.pickle'
     main_df.to_pickle(os.path.join(output_path, pickle_name))
-
-
-def main():
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.DEBUG)
-    mne.set_log_level(logging.WARNING)
-
-    create_training_data()
-
-
-if __name__ == '__main__':
-    main()
