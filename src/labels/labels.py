@@ -4,7 +4,8 @@ import os
 import pandas as pd
 
 from config import LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
-from data.utils import get_meta_df, get_trial_index, get_trials
+from data.utils import (get_meta_df, get_trial_index,
+get_trials, compute_label_thresholds)
 
 
 def compute_three_class_label(file_path):
@@ -14,7 +15,7 @@ def compute_three_class_label(file_path):
     label = meta_df.loc[index][col]
 
     # Precomputed label thresholds
-    L, M = 38, 48
+    L, M = compute_label_thresholds()
 
     if label <= L:
         return 'L'
@@ -30,8 +31,8 @@ def compute_binary_label(file_path):
     return meta_df.loc[index]['RESP_4W']
 
 
-def create_labels(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT,
-                  three_class=False):
+def create_labels(label_func, pickle_name, input_path=PROCESSED_ROOT,
+                  output_path=LABELED_ROOT):
     logging.info('Creating labels...')
     trials = get_trials(RAW_ROOT)
     labels_df = pd.DataFrame(columns=['label'], index=trials)
@@ -41,17 +42,19 @@ def create_labels(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT,
             continue
         file_path = os.path.join(input_path, file_name)
         _, _, trial = get_trial_index(file_name)
-        if not three_class:
-            labels_df.loc[trial]['label'] = compute_binary_label(file_path)
-        else:
-            labels_df.loc[trial]['label'] = \
-                compute_three_class_label(file_path)
+        labels_df.loc[trial]['label'] = label_func(file_path)
+    logging.info('The resulting data: \n{}'.format(
+        labels_df.describe()))
     logging.info('Saving label data as pickle...')
-    pickle_name = 'labels.pickle'
     labels_df.to_pickle(os.path.join(output_path, pickle_name))
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
 
-    create_labels()
+    create_labels(compute_three_class_label, 'labels_depressed.pickle')
+    create_labels(compute_binary_label, 'labels_response.pickle')
+
+
+if __name__ == '__main__':
+    main()

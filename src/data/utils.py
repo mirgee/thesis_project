@@ -44,7 +44,7 @@ def get_duration(file_path, df):
 
 def compute_label_thresholds():
     meta_df = get_meta_df()
-    s = sorted(meta_df['M_1'].values + meta_df['M_4'].values)
+    s = sorted(meta_df['M_1'].append(meta_df['M_4']).values)
     n = len(s)
     L = s[n // 3]
     M = s[2*n // 3]
@@ -62,6 +62,8 @@ def get_trial_index(file_path):
     trial_num = no_ext_file_name[-1]
     index = no_ext_file_name[:-1]
 
+    # TODO: Trial-num and index is better reversed - reverse and regenerate
+    # data
     return trial_num, int(index), '-'.join((trial_num, index))
 
 
