@@ -36,7 +36,7 @@ def _create_df(input_path, feature_names):
 
 
 def compute_nl_split(splits, feature_names, trial, df_in, df_out,
-                     compute_overall=False):
+                     compute_overall=True):
     for channel in CHANNEL_NAMES:
         values = df_in[channel].values
         n = len(values)
@@ -48,7 +48,7 @@ def compute_nl_split(splits, feature_names, trial, df_in, df_out,
         if compute_overall:
             new_row.update(
                 _features_for_channel_chunk(
-                    trial, feature_names, values, len(splits)))
+                    trial, feature_names, values, splits))
         df_out.loc[(trial, channel)] = pd.Series(new_row)
         logging.debug("Adding row: \n %s" % df_out.loc[(trial, channel)])
     return df_out
@@ -63,7 +63,7 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
 
     for file_name in os.listdir(input_path):
         if not file_name.endswith('.fif'):
-            logging.info('Skipping file %s' % file_name)
+            logging.info('Skipping file %s.' % file_name)
             continue
 
         file_path = os.path.join(input_path, file_name)
@@ -71,9 +71,7 @@ def create_split_data(feature_names=FEATURE_NAMES, input_path=PROCESSED_ROOT,
         try:
             df_in = df_from_fif(file_path, 60)
         except Exception:
-            duration = get_duration(file_path)
-            logging.info(f'Skipping file {file_name} with duration {duration}'
-                         f' s.')
+            logging.info(f'Skipping file {file_name} with insufficient duration.')
             continue
 
         df = compute_nl_split(4, feature_names, trial, df_in, df)

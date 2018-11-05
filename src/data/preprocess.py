@@ -72,7 +72,7 @@ def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
         mne_raw_data.save(os.path.join(output_file, processed_file_name),
                           proj=proj)
 
-        return mne_raw_data
+    return mne_raw_data
 
 
 @click.command()
