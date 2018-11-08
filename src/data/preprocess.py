@@ -41,9 +41,11 @@ def preprocess_raw_mne_file(mne_raw_data, proj=False):
 
     # Remove power line noise, may not be necessary depending on the data
     # mne_raw_data.notch_filter(np.arange(50, 125, 50), filter_length='auto', phase='zero')
+    mne_raw_data.notch_filter(50, filter_length='auto', phase='zero')
 
     # Or we can simply low pass filter, which may be better
-    mne_raw_data.filter(None, 50., fir_design='firwin')
+    mne_raw_data.filter(.5, None, fir_design='firwin')
+    mne_raw_data.filter(None, 70., fir_design='firwin')
 
     # Remove slow drifts via high pass, bad practice in some situations, but may improve ICA
     # mne_raw_data.filter(1., None, fir_design='firwin')
@@ -54,7 +56,6 @@ def preprocess_raw_mne_file(mne_raw_data, proj=False):
         mne_raw_data.resample(250, npad="auto")
 
     return mne_raw_data
-
 
 
 def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
@@ -70,7 +71,7 @@ def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
 
         processed_file_name = remove_extension(file_name) + '.fif'
         mne_raw_data.save(os.path.join(output_file, processed_file_name),
-                          proj=proj)
+                          proj=proj, overwrite=True)
 
     return mne_raw_data
 
@@ -79,7 +80,6 @@ def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
 @click.option('--input_folder', type=click.Path(exists=True, readable=True, dir_okay=False))
 @click.option('--output_folder', type=click.Path(writable=True, dir_okay=False))
 def main(input_folder, output_folder):
-    logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
 
     logging.info('Preprocessing data')

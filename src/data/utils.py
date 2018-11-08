@@ -62,8 +62,8 @@ def remove_extension(file_path):
 def get_trial_index(file_path):
     no_ext_file_name = remove_extension(file_path)
 
-    patient_id = no_ext_file_name[-1]
-    trial = no_ext_file_name[:-1]
+    trial = no_ext_file_name[-1]
+    patient_id = no_ext_file_name[:-1]
 
     return trial, int(patient_id), str(no_ext_file_name)
 
