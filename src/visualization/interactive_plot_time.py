@@ -8,16 +8,16 @@ import pandas as pd
 import numpy as np
 
 from config import CHANNEL_NAMES, DATA_ROOT, PROCESSED_ROOT, RAW_ROOT
-from data.utils import df_from_fif, df_from_tdt, get_sfreq
+from data.utils import df_from_fif, df_from_tdt, get_sampling_frequency
 from data.preprocess import preprocess_raw_mne_file
 
 
 def interactive_plot_time(input_file, kind, apply_proj=False):
     """Create an interactive figure visualizing all channels from a file."""
-    df = df_from_fif(input_file) if kind=='PROCESSED' else \
+    df = df_from_fif(input_file) if kind == 'PROCESSED' else \
         df_from_tdt(input_file)
 
-    sfreq = get_sfreq(input_file)
+    sfreq = get_sampling_frequency(input_file)
     info = mne.create_info(ch_names=CHANNEL_NAMES, sfreq=sfreq, ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)
 
@@ -35,7 +35,7 @@ def interactive_plot_time(input_file, kind, apply_proj=False):
 
 
 def examine_all_time(kind='RAW', proj=False):
-    input_folder = PROCESSED_ROOT if kind=='PROCESSED' else RAW_ROOT
+    input_folder = PROCESSED_ROOT if kind == 'PROCESSED' else RAW_ROOT
 
     to_examine = os.listdir(input_folder)
     rd.shuffle(to_examine)

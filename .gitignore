@@ -1,5 +1,5 @@
-# exclude data from source control by default
-/data/
+data/
 *__pycache__*
-*.ipynb_checkpoints*
 *.swp
+notebooks/.ipynb_checkpoints/*
+*.pyc

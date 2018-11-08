@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn import datasets, metrics, svm
-from sklearn.feature_selection import SelectFromModel, RFE
+from sklearn.feature_selection import (SelectFromModel, RFE, SelectKBest,
+                                       mutual_info_classif)
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (classification_report, confusion_matrix,
                              roc_auc_score, roc_curve)
@@ -60,8 +61,6 @@ def plot_roc_curve(clf, X_test, y_test):
 
 
 def select_from_model(n, clf, X_train, y_train):
-    logging.info('Selecting features...')
-
     sfm = SelectFromModel(clf, threshold=0.25)
     sfm.fit(X_train, y_train)
     n_features = sfm.transform(X_train).shape[1]
@@ -80,23 +79,38 @@ def select_rfe(n, clf, X_train, y_train):
     return X_transform, rfe.get_support()
 
 
+def select_filter(n, clf, X_train, y_train):
+    skb = SelectKBest(mutual_info_classif, k=n)
+    fit = skb.fit(X_train, y_train)
+    logging.info(f'Scores of selected features {fit.scores_}')
+    X_transform = skb.transform(X_train)
+
+    return X_transform, skb.get_support()
+
+
 def train(clf_name):
     logging.info('Performing logistic regression on the dataset...')
 
     df_X = pd.read_pickle(os.path.join(LABELED_ROOT, 'splits.pickle'))
     # Feature selection
     # rows = [row for row in df_X.index if row[0].startswith('b')]
-    # Only total param
+    # from data.utils import get_meta_df
+    # meta_df = get_meta_df()
+    # rows = [row for row in df_X.index if
+    #         meta_df.loc[int(row[0].split('-')[1]), 'freq'] == 250 and row[0].startswith('b')]
+    # print([int(row[0].split('-')[1]) for row in df_X.index if
+    #         meta_df.loc[int(row[0].split('-')[1]), 'freq'] == 250 and row[0].startswith('b')])
     df_X = df_X.loc[:, (slice(None), [4], slice(None))].unstack().dropna()
 
-    df_y = pd.read_pickle(os.path.join(LABELED_ROOT, 'labels_depressed.pickle'))
+    df_y = pd.read_pickle(os.path.join(LABELED_ROOT, 'labels_response.pickle'))
     df = df_X.join(df_y)
+    df.to_pickle(os.path.join(LABELED_ROOT, 'splits_with_label.pickle'))
 
     logging.info(f'The dataframe used for training: \n{df}')
 
     X = df.loc[:, df.columns != 'label'].values
     y = df.loc[:, 'label'].values
-    # y = y.astype('int')
+    y = y.astype('int')
 
     # summary(X, y)
 
@@ -105,7 +119,8 @@ def train(clf_name):
             X, y, test_size=TEST_SIZE, random_state=randint(0, 1000))
     if clf_name == 'logistic-regression':
         clf = LogisticRegression(C=1e5, solver='lbfgs', multi_class='multinomial')
-        X_train, supp = select_from_model(15, clf, X_train, y_train)
+        logging.info('Selecting features...')
+        X_train, supp = select_filter(10, clf, X_train, y_train)
         X_test = X_test[:, supp]
 
         logging.info('Selected features: {}'.format(
