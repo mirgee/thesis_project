@@ -11,7 +11,7 @@ from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from data.utils import df_from_fif, get_meta_df, get_trial_index, get_trials
 from lib.nolitsa.dimension import fnn
 
-FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst']
+FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst', 'sampen']
 EMBED_DIM = 10
 
 
@@ -40,6 +40,12 @@ def compute_hurst(data):
     hurst = nolds.hurst_rs(data)
     logging.debug('Computed hurst: %f' % hurst)
     return hurst
+
+
+def compute_sampen(data):
+    sampen = nolds.sampen(data, emb_dim=EMBED_DIM)
+    logging.debug('Computed sampen: %f' % sampen)
+    return sampen
 
 
 def compute_embedding_dimension(data):

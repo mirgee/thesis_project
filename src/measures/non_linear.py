@@ -7,7 +7,7 @@ import mne
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT
 from data.utils import df_from_fif, get_trial_index
 from measures.utils import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
-                            compute_hurst, compute_lyapunov)
+                            compute_hurst, compute_lyapunov, compute_sampen)
 
 
 def compute_nl(file_path):
@@ -22,6 +22,7 @@ def compute_nl(file_path):
             (channel, 'corr'): compute_corr_dim(values),
             (channel, 'dfa'): compute_dfa(values),
             (channel, 'hurst'): compute_hurst(values),
+            (channel, 'sampen'): compute_sampen(values),
         })
 
     return new_row
@@ -45,7 +46,7 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
         try:
             new_row = compute_nl(file_path)
         except IndexError:
-            logging.warn('IndexError exception caught for {file_name}')
+            logging.warn(f'IndexError exception caught for {file_name}')
             continue
         trial, index, _ = get_trial_index(file_name)
         main_df.loc[(index, trial)] = pd.Series(new_row)
