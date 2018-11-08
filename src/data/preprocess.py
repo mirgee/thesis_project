@@ -55,6 +55,8 @@ def preprocess_raw_mne_file(mne_raw_data, proj=False):
         logging.info('Downsampling data...')
         mne_raw_data.resample(250, npad="auto")
 
+    mne_raw_data.crop(0, 60)
+
     return mne_raw_data
 
 
@@ -67,7 +69,10 @@ def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
         mne_raw_data = raw_mne_from_tdt(file_path)
 
         proj = False
-        mne_raw_data = preprocess_raw_mne_file(mne_raw_data, proj)
+        try:
+            mne_raw_data = preprocess_raw_mne_file(mne_raw_data, proj)
+        except ValueError:
+            continue
 
         processed_file_name = remove_extension(file_name) + '.fif'
         mne_raw_data.save(os.path.join(output_file, processed_file_name),

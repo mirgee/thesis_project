@@ -12,7 +12,7 @@ from measures.utils import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
 
 def compute_nl(file_path):
     """Compute dict of non-linear features for trial recorded in file_name"""
-    df = df_from_fif(file_path, 60)
+    df = df_from_fif(file_path)
     new_row = {}
 
     for channel in CHANNEL_NAMES:
@@ -43,11 +43,7 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
             logging.info('Skipping file %s' % file_name)
             continue
         file_path = os.path.join(input_path, file_name)
-        try:
-            new_row = compute_nl(file_path)
-        except IndexError:
-            logging.warn(f'IndexError exception caught for {file_name}')
-            continue
+        new_row = compute_nl(file_path)
         trial, index, _ = get_trial_index(file_name)
         main_df.loc[(index, trial)] = pd.Series(new_row)
         logging.debug("Training dataframe after adding a row: \n%s" % main_df)
