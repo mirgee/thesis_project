@@ -20,9 +20,8 @@ def df_from_fif(file_path, seconds=None):
     t = pd.DataFrame(raw_fif.get_data())
     df = pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
     sfreq = int(raw_fif.info["sfreq"])
-    dur = int(raw_fif.info["file_id"]['secs'])
     n = len(df) if seconds is None else sfreq*seconds
-    logging.debug(f'{file_path}: {sfreq} Hz, {dur} s')
+    logging.debug(f'{file_path}: {sfreq} Hz')
     return df.iloc[:n]
 
 
