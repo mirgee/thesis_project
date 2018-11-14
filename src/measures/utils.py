@@ -26,7 +26,15 @@ def compute_lyapunov(data, use_fnn=False):
 
 
 def compute_corr_dim(data):
-    corr_dim = nolds.corr_dim(data, emb_dim=EMBED_DIM)
+    dims = list(range(3, 10))
+    prev_val = 0
+    for dim in dims:
+        corr_dim = nolds.corr_dim(data, emb_dim=dim)
+        if prev_val > corr_dim:
+            corr_dim = prev_val
+            break
+        prev_val = corr_dim
+    assert corr_dim != 0
     logging.debug('Computed CD: %f' % corr_dim)
     return corr_dim
 
@@ -60,7 +68,9 @@ def compute_higuchi(data):
         results.append(
             hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
         win_beg += win_shift
-    return sum(results)/len(results)
+    higu = sum(results)/len(results)
+    logging.debug('Computed higu: %f' % higu)
+    return higu
 
 
 def compute_embedding_dimension(data):
