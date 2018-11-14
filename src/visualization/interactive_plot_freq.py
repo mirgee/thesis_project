@@ -10,7 +10,7 @@ from scipy.signal import welch
 import matplotlib.pyplot as plt
 
 from config import CHANNEL_NAMES, DATA_ROOT, PROCESSED_ROOT, RAW_ROOT
-from data.utils import df_from_fif, df_from_tdt, get_sfreq
+from data.utils import df_from_fif, df_from_tdt, get_sampling_frequency
 from data.preprocess import preprocess_raw_mne_file
 
 
@@ -36,7 +36,10 @@ def interactive_plot_freq(input_file, kind, apply_proj=False):
     df = df_from_fif(input_file) if kind=='PROCESSED' else \
         df_from_tdt(input_file)
 
-    sfreq = get_sfreq(input_file)
+    if kind == 'RAW':
+        sfreq = get_sampling_frequency(input_file)
+    else:
+        sfreq = 250
     info = mne.create_info(ch_names=CHANNEL_NAMES, sfreq=sfreq, ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)
     processed = preprocess_raw_mne_file(data, apply_proj)

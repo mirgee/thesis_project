@@ -7,6 +7,7 @@ import mne
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT
 from data.utils import df_from_fif, get_trial_index
 from measures.utils import (FEATURE_NAMES, compute_corr_dim, compute_dfa,
+                            compute_embedding_dimension, compute_higuchi,
                             compute_hurst, compute_lyapunov, compute_sampen)
 
 
@@ -23,6 +24,8 @@ def compute_nl(file_path):
             (channel, 'dfa'): compute_dfa(values),
             (channel, 'hurst'): compute_hurst(values),
             (channel, 'sampen'): compute_sampen(values),
+            (channel, 'higu'): compute_higuchi(values),
+            # (channel, 'emdim'): compute_embedding_dimension(values),
         })
 
     return new_row

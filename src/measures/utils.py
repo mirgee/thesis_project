@@ -10,6 +10,7 @@ import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from data.utils import df_from_fif, get_meta_df, get_trial_index, get_trials
 from lib.nolitsa.dimension import fnn
+from lib.HiguchiFractalDimension import hfd
 
 FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst', 'sampen']
 EMBED_DIM = 10
@@ -46,6 +47,20 @@ def compute_sampen(data):
     sampen = nolds.sampen(data, emb_dim=EMBED_DIM)
     logging.debug('Computed sampen: %f' % sampen)
     return sampen
+
+
+def compute_higuchi(data):
+    num_k = 50
+    k_max = 50
+    win_width = 1500
+    win_shift = 200
+    win_beg = 0
+    results = []
+    while win_beg+win_width < len(data):
+        results.append(
+            hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
+        win_beg += win_shift
+    return sum(results)/len(results)
 
 
 def compute_embedding_dimension(data):
