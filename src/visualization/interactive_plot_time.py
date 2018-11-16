@@ -34,8 +34,10 @@ def interactive_plot_time(input_file, kind, apply_proj=False):
         fig.set_size_inches(18.5, 10.5, forward=True)
 
 
-def examine_all_time(kind='RAW', proj=False):
+def examine_all_time(kind='RAW', proj=False, file=''):
     input_folder = PROCESSED_ROOT if kind == 'PROCESSED' else RAW_ROOT
+    if file:
+        interactive_plot_time(os.path.join(input_folder, file), kind, proj)
 
     to_examine = os.listdir(input_folder)
     rd.shuffle(to_examine)
@@ -46,14 +48,15 @@ def examine_all_time(kind='RAW', proj=False):
 
 @click.command()
 @click.option('--kind', type=str, default='RAW')
+@click.option('--file', type=str, default='')
 @click.option('--proj', type=bool, default=False)
-def main(kind, proj):
+def main(kind, file, proj):
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
 
     logger.info(f'Plotting EEG singals of kind {kind}...')
 
-    examine_all_time(kind, proj)
+    examine_all_time(kind, proj, file)
 
 if __name__ == '__main__':
     main()

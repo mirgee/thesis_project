@@ -10,17 +10,26 @@ import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from data.utils import df_from_fif, get_meta_df, get_trial_index, get_trials
 from lib.nolitsa.dimension import fnn
+from lib.nolitsa.lyapunov import mle_embed
 from lib.HiguchiFractalDimension import hfd
 
-FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst', 'sampen']
+FEATURE_NAMES = ['lyap', 'corr', 'dfa', 'hurst', 'sampen', 'higu']
 EMBED_DIM = 10
 
 
-def compute_lyapunov(data, use_fnn=False):
+def _compute_lyapunov(data, use_fnn=False):
     if use_fnn:
         # When no lag specified, it is found via autocorrelation method
         m = compute_embedding_dimension(data)
     lyap = nolds.lyap_r(data, emb_dim=EMBED_DIM)
+    logging.debug('Computed LE: %f' % lyap)
+    return lyap
+
+
+def compute_lyapunov(data):
+    res = mle_embed(data, dim=[15], tau=3, window=100, maxt=30)
+    poly = np.polyfit(np.arange(len(res)), res, 1)
+    lyap = poly[0] / 0.004
     logging.debug('Computed LE: %f' % lyap)
     return lyap
 

@@ -20,11 +20,11 @@ def compute_nl(file_path):
         values = df[channel].values
         new_row.update({
             (channel, 'lyap'): compute_lyapunov(values),
-            (channel, 'corr'): compute_corr_dim(values),
-            (channel, 'dfa'): compute_dfa(values),
-            (channel, 'hurst'): compute_hurst(values),
-            (channel, 'sampen'): compute_sampen(values),
-            (channel, 'higu'): compute_higuchi(values),
+            # (channel, 'corr'): compute_corr_dim(values),
+            # (channel, 'dfa'): compute_dfa(values),
+            # (channel, 'hurst'): compute_hurst(values),
+            # (channel, 'sampen'): compute_sampen(values),
+            # (channel, 'higu'): compute_higuchi(values),
             # (channel, 'emdim'): compute_embedding_dimension(values),
         })
 
@@ -52,7 +52,7 @@ def create_training_data(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
         logging.debug("Training dataframe after adding a row: \n%s" % main_df)
 
     logging.info('Saving training data as pickle...')
-    pickle_name = 'training.pickle'
+    pickle_name = 'training_lyap.pickle'
     main_df.to_pickle(os.path.join(output_path, pickle_name))
 
 
