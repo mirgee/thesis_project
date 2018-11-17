@@ -1,0 +1,9 @@
+[submodule "src/lib/HiguchiFractalDimension"]
+	path = src/lib/HiguchiFractalDimension
+	url = git@github.com:inuritdino/HiguchiFractalDimension.git
+[submodule "src/lib/nolitsa"]
+	path = src/lib/nolitsa
+	url = git@github.com:manu-mannattil/nolitsa.git
+[submodule "src/lib/nolds"]
+	path = src/lib/nolds
+	url = git@github.com:CSchoel/nolds.git

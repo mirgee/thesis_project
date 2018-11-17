@@ -2,6 +2,7 @@ import logging
 import os
 
 import pandas as pd
+import click
 
 from config import LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from data.utils import (get_meta_df, get_trial_index, 
@@ -51,6 +52,8 @@ def create_labels(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
     labels_df.to_pickle(os.path.join(output_path, 'labels.pickle'))
 
 
+@click.command()
+@click.option('--out', type=str, default='training_with_meta.pkl')
 def main():
     logging.basicConfig(level=logging.DEBUG)
 
