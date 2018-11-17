@@ -44,7 +44,7 @@ def create_training_data(output_path):
 
 
 @click.command()
-@click.option('--out', type=str, default='training.pkl')
+@click.option('--out', type=str, default='measures.pkl')
 def main(out):
     logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.ERROR)

@@ -7,11 +7,6 @@ import mne
 from config import CHANNEL_NAMES, META_COLUMN_NAMES, META_FILE_NAME, RAW_ROOT
 
 
-def get_meta_df():
-    return pd.read_excel(os.path.join(RAW_ROOT, META_FILE_NAME), index_col='ID',
-                         names=META_COLUMN_NAMES)
-
-
 def get_recording_length(file_path, df, seconds):
     duration = get_duration(file_path, df)
     if duration < seconds:

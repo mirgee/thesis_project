@@ -4,60 +4,64 @@ import os
 import pandas as pd
 import click
 
-from config import LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
-from data.utils import (get_meta_df, get_trial_index, 
-                        get_trials, compute_label_thresholds)
+from config import LABELED_ROOT
+from data.data_files import DataKinds, files_builder
 
 
-def compute_three_class_label(file_path):
-    trial, index, _ = get_trial_index(file_path)
-    meta_df = get_meta_df()
-    col = 'M_1' if trial == 'a' else 'M_4'
-    label = meta_df.loc[index][col]
-
-    # Precomputed label thresholds
-    L, M = compute_label_thresholds()
-
-    if label <= L:
-        return 'L'
-    elif label <= M:
-        return 'M'
-    else:
-        return 'H'
-
-
-def compute_binary_label(file_path):
-    trial, index, _ = get_trial_index(file_path)
-    meta_df = get_meta_df()
-    return meta_df.loc[index]['RESP_4W']
-
-
-def create_labels(input_path=PROCESSED_ROOT, output_path=LABELED_ROOT):
-    logging.info('Creating labels...')
+def create_labels(output_path):
+    logging.info('Creating dataframe with the meta information.')
+    cols = ['resp', 'b/a', 'sex', 'age', 'sc', 'sc_bef', 'sc_aft', 'change']
     idxs = pd.MultiIndex.from_product([list(range(1, 134)), ['a', 'b']],
                                       names=['patient', 'trial'])
-    labels_df = pd.DataFrame(columns=['label_d', 'label_r', 'label_ba'], index=idxs)
-    for file_name in os.listdir(input_path):
-        if not file_name.endswith('.fif'):
-            logging.info('Skipping file %s' % file_name)
-            continue
-        file_path = os.path.join(input_path, file_name)
-        trial, index, _ = get_trial_index(file_name)
-        labels_df.loc[(index, trial)]['label_d'] = compute_three_class_label(file_path)
-        labels_df.loc[(index, trial)]['label_r'] = compute_binary_label(file_path)
-        labels_df.loc[(index, trial)]['label_ba'] = 0 if trial == 'a' else 1
-    logging.info('The resulting data: \n{}'.format(
-        labels_df.describe()))
-    logging.info('Saving label data as pickle...')
-    labels_df.to_pickle(os.path.join(output_path, 'labels.pickle'))
+    extra_df = pd.DataFrame(columns=cols, index=idxs)
+    meta_df = files_builder(DataKinds.META)
+    for df_file, index, trial in files_builder(DataKinds.PROCESSED):
+        meta_row = meta_df.loc[index, :]
+        extra_df.loc[(index, trial)]['resp'] = meta_row['RESP_4W']
+        extra_df.loc[(index, trial)]['b/a'] = 0 if trial == 'a' else 1
+        extra_df.loc[(index, trial)]['age'] = meta_row['AGE']
+        extra_df.loc[(index, trial)]['sex'] = meta_row['SEX']
+        m1 = meta_row['M_1']
+        m4 = meta_row['M_4']
+        extra_df.loc[(index, trial)]['sc'] = m1 if trial == 'a' else m4
+        extra_df.loc[(index, trial)]['sc_bef'] = m1
+        extra_df.loc[(index, trial)]['sc_aft'] = m4
+        extra_df.loc[(index, trial)]['change'] = m1/m4
+        logging.debug('Added row: \n{}'.format(
+            extra_df.loc[(index, trial)]))
+
+    extra_df = extra_df.astype(
+        {'resp': 'category',
+         'b/a': 'category',
+         'sex': 'category',
+         'age': int,
+         'sc': float,
+         'sc_bef': int,
+         'sc_aft': int,
+         'change': float})
+    logging.debug('The resulting data: \n{}'.format(
+        extra_df.describe()))
+    logging.debug(f'Saving metadata dataframe at {output_path}.')
+    extra_df.to_pickle(output_path)
+
+    measures_file = os.path.join(
+        "".join(output_path.split(os.sep)[:-1]), 'measures.pkl')
+    if os.path.isfile(measures_file):
+        measures_df = pd.read_pickle(measures_file)
+        joined_df = measures_df.join(extra_df)
+        joined_file = os.path.join(
+            output_path.split(os.sep)[:-1], 'measures_w_meta.pkl')
+        logging.debug(f'Saving joined dataframe at {joined_file}.')
+        joined_df.to_pickle(output_path)
 
 
 @click.command()
-@click.option('--out', type=str, default='training_with_meta.pkl')
-def main():
+@click.option('--out', type=str, default='meta.pkl')
+def main(out):
     logging.basicConfig(level=logging.DEBUG)
 
-    create_labels()
+    output_path = os.path.join(LABELED_ROOT, out)
+    create_labels(output_path)
 
 
 if __name__ == '__main__':
