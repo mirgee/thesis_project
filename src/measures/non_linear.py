@@ -7,7 +7,7 @@ import pandas as pd
 import measures.algorithms
 import mne
 from config import LABELED_ROOT
-from data.data_files import CHANNEL_NAMES, DataKinds, files_builder
+from data.data_files import CHANNEL_NAMES, DataKind, files_builder
 from measures.algorithms import measure_names, registered_algos
 
 
@@ -34,9 +34,9 @@ def create_training_data(output_path):
                                       names=['patient', 'trial'])
     main_df = pd.DataFrame(columns=cols, index=idxs)
 
-    for df_file, index, trial in files_builder(DataKinds.PROCESSED):
-        new_row = compute_nl(df_file)
-        main_df.loc[(index, trial)] = pd.Series(new_row)
+    for file in files_builder(DataKind.PROCESSED):
+        new_row = compute_nl(file.df)
+        main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
         logging.debug("New row: \n%s" % new_row)
 
         logging.debug(f'Saving training data at {output_path}.')
