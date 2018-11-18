@@ -11,16 +11,16 @@ from config import LABELED_ROOT
 def create_bef_aft_df(output_path, measure='all', format='pkl'):
     df = pd.read_pickle(
         os.path.join(LABELED_ROOT, measure, f'training_{measure}.pkl'))
-    col = slice(None) if measure == 'all' else measure
-    df = df.loc[:, (slice(None), col)].dropna()
-    df.columns = df.columns.droplevel(1)
-    df = df.astype(float)
-    if measure is not 'all':
-        df.to_pickle(
-            os.path.join(LABELED_ROOT, measure, f'training_{measure}.pkl'))
+    logging.debug(f'TRAINING DF FOR {measure.upper()}:\n{df}')
+    if isinstance(df.columns, pd.core.index.MultiIndex):
+        col = slice(None) if measure == 'all' else measure
+        df = df.loc[:, (slice(None), col)].dropna()
+        df.columns = df.columns.droplevel(1)
+        df = df.astype(float)
 
     df_y = pd.read_pickle(os.path.join(LABELED_ROOT, 'meta', 'meta.pkl'))
-    df = df.join(df_y)
+    if set(df_y.columns).isdisjoint(set(df.columns)):
+        df = df.join(df_y)
 
     df_bef = df.loc[(slice(None), 'a'), :]
     df_bef.index = df_bef.index.droplevel(1)
@@ -37,15 +37,21 @@ def create_bef_aft_df(output_path, measure='all', format='pkl'):
             os.path.join(LABELED_ROOT, measure, f'{measure}_bef.csv'))
         df_aft.to_csv(
             os.path.join(LABELED_ROOT, measure, f'{measure}_aft.csv'))
+        if measure is not 'all':
+            df.to_csv(
+                os.path.join(LABELED_ROOT, measure, f'training_{measure}.csv'))
     elif format == 'pkl':
         df_bef.to_pickle(
             os.path.join(LABELED_ROOT, measure, f'{measure}_bef.pkl'))
         df_aft.to_pickle(
             os.path.join(LABELED_ROOT, measure, f'{measure}_aft.pkl'))
+        if measure is not 'all':
+            df.to_pickle(
+                os.path.join(LABELED_ROOT, measure, f'training_{measure}.pkl'))
     else:
         raise NotImplementedError(f'Format {format} not supported.')
 
-    logging.debug(f'{measure.upper()} ORIGINAL WITHOUT N/A\'s:\n{df}')
+    logging.debug(f'{measure.upper()} ORIGINAL DATAFRAME:\n{df}')
     logging.debug(f'{measure.upper()} PATIENTS BEFORE:\n{df_bef}')
     logging.debug(f'{measure.upper()} PATIENTS AFTER:\n{df_aft}')
 
