@@ -4,33 +4,8 @@ import logging
 import os
 import click
 
-from data.utils import raw_mne_from_tdt, remove_extension
 
-from config import RAW_ROOT, PROCESSED_ROOT
-
-
-def remove_outliers(data, alpha):
-    mean = np.mean(data, axis=0)
-    std = np.std(data, axis=0)
-
-    attempts = 0
-    while attempts < 100:
-        alpha = 0.1
-        outliers = [x for x in data if mean-alpha*std < x < mean+alpha*std]
-
-        percent = len(outliers) / len(data)
-
-        if percent < 0.07:
-            data = np.array([x for x,i in enumerate(data) if x not in outliers or
-                             i==0])
-            break
-        else:
-            alpha *= 1.5
-            attempts += 1
-    else:
-        raise Exception('Failed to eliminate outliers')
-
-    return data
+from config import PROCESSED_ROOT
 
 
 def preprocess_raw_mne_file(mne_raw_data, proj=False):
@@ -60,23 +35,21 @@ def preprocess_raw_mne_file(mne_raw_data, proj=False):
     return mne_raw_data
 
 
-def preprocess_all(input_path=RAW_ROOT, output_file=PROCESSED_ROOT):
-    for file_name in os.listdir(input_path):
-        if not file_name.endswith('.tdt'):
-            logging.info('Skipping file %s' % file_name)
-            continue
-        file_path = os.path.join(input_path, file_name)
-        mne_raw_data = raw_mne_from_tdt(file_path)
+def preprocess_all(output_file=PROCESSED_ROOT):
+    for file in files_builder(DataKind.RAW):
+        mne_raw_data = files_builder(DataKind.MNE, file=file)
 
-        proj = False
         try:
             mne_raw_data = preprocess_raw_mne_file(mne_raw_data, proj)
         except ValueError:
+            # Raised when duration is < 60 s, we may safely skip the file
+            logging.debug(f'Skipping file {file.name} because of insufficient '
+                          'duration.')
             continue
 
-        processed_file_name = remove_extension(file_name) + '.fif'
+        processed_file_name = os.path.splitext(file_name)[0] + '.fif'
         mne_raw_data.save(os.path.join(output_file, processed_file_name),
-                          proj=proj, overwrite=True)
+                          proj=False, overwrite=True)
 
     return mne_raw_data
 

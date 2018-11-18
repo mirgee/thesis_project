@@ -4,11 +4,10 @@ import os
 import click
 import pandas as pd
 
-import measures.algorithms
+import measures.algorithms as algos
 import mne
 from config import LABELED_ROOT
 from data.data_files import CHANNEL_NAMES, DataKind, files_builder
-from measures.algorithms import measure_names, registered_algos
 
 
 def compute_nl(df):
@@ -18,7 +17,7 @@ def compute_nl(df):
     for channel in CHANNEL_NAMES:
         values = df[channel].values
         new_row.update({
-            (channel, f.algo_name): f(values) for f in registered_algos
+            (channel, f.algo_name): f(values) for f in algos.registered_algos
         })
 
     return new_row
@@ -28,7 +27,7 @@ def create_training_data(output_path):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data.')
 
-    cols = pd.MultiIndex.from_product([CHANNEL_NAMES, measure_names],
+    cols = pd.MultiIndex.from_product([CHANNEL_NAMES, algos.measure_names],
                                       names=['channel', 'measure'])
     idxs = pd.MultiIndex.from_product([list(range(1, 134)), ['a', 'b']],
                                       names=['patient', 'trial'])
