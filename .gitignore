@@ -1,4 +1,5 @@
 data/
+!src/data
 *__pycache__*
 *.swp
 notebooks/.ipynb_checkpoints/*
