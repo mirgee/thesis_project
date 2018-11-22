@@ -42,21 +42,33 @@ def register(algo_name):
     return decorator
 
 
+# @register('emdim')
+@log_result
+def compute_embedding_dimension(data, tau, window):
+    R = 3.0
+    A = 0.5
+    dims_to_try = np.arange(1, 15)
+    fnns = fnn(data, dim=dims_to_try, R=R, A=A, tau=tau, window=window,
+               metric='euclidean')
+    # Return the dimension with lowest number of FNN with both tests applied
+    return np.argmin(fnns[2])
+
+
 @register('lyap')
 @log_result
-def compute_lyapunov(data, lib='nolitsa', use_fnn=False):
-    dim = 15
-    tau = 3
-    window = 100
-    maxt = 30
+def compute_lyapunov(data, lib='nolitsa', use_fnn=True):
+    dim = 8
+    tau = 1
+    window = 50
+    maxt = 15
     sampl_period = 1/250
     if use_fnn:
         # When no lag specified, it is found via autocorrelation method
-        dim = compute_embedding_dimension(data)
+        dim = compute_embedding_dimension(data, tau, window)
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res, 1)
-        lyap = poly[0] / sampl_period
+        lyap = poly[0]
     elif lib == 'nolds':
         lyap = nolds.lyap_r(data, emb_dim=dim, lag=tau, min_tsep=window,
                             trajectory_len=maxt) / sampl_period
@@ -65,7 +77,7 @@ def compute_lyapunov(data, lib='nolitsa', use_fnn=False):
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
 def compute_corr_dim(data, lib='nolitsa'):
     dims = list(range(3, 10))
@@ -92,25 +104,25 @@ def compute_corr_dim(data, lib='nolitsa'):
     return corr_dim
 
 
-@register('dfa')
+# @register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
 
 
-@register('hurst')
+# @register('hurst')
 @log_result
 def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-@register('sampen')
+# @register('sampen')
 @log_result
 def compute_sampen(data):
     return nolds.sampen(data, emb_dim=EMBED_DIM)
 
 
-@register('higu')
+# @register('higu')
 @log_result
 def compute_higuchi(data):
     num_k = 50
@@ -124,12 +136,3 @@ def compute_higuchi(data):
             hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
         win_beg += win_shift
     return sum(results)/len(results)
-
-
-@register('emdim')
-@log_result
-def compute_embedding_dimension(data):
-    dims_to_try = np.arange(1, 15)
-    fnns = fnn(data, dim=dims_to_try)
-    # Return the dimension with lowest number of FNN with both tests applied
-    return np.argmin(fnns[2])
