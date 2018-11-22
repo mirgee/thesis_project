@@ -58,6 +58,7 @@ class DataKind(Enum):
     RAW = auto()
     PROCESSED = auto()
     MNE = auto()
+    SURROGATE = auto()
 
 
 DATA_KINDS = {
@@ -74,6 +75,9 @@ DATA_KINDS = {
         data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'processed')),
         exp_exts=('.fif',),
         df_from_path=df_from_fif),
+    DataKind.SURROGATE: DataKindDefinition(
+        name='surrogate',
+        exp_exts=('.csv',)),
 }
 
 
