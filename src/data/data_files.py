@@ -54,17 +54,14 @@ class DataKindDefinition:
 
 
 class DataKind(Enum):
-    META = auto()
-    RAW = auto()
-    PROCESSED = auto()
-    MNE = auto()
-    SURROGATE = auto()
+    META = 'meta'
+    RAW = 'raw'
+    PROCESSED = 'processed'
+    MNE = 'mne'
+    SURROGATE = 'surrogate'
 
 
 DATA_KINDS = {
-    DataKind.META: DataKindDefinition(
-        name='meta',
-        exp_exts=('.xlsx',)),
     DataKind.RAW: DataKindDefinition(
         name='raw',
         data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'raw')),
@@ -77,7 +74,9 @@ DATA_KINDS = {
         df_from_path=df_from_fif),
     DataKind.SURROGATE: DataKindDefinition(
         name='surrogate',
-        exp_exts=('.csv',)),
+        data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'surrogate')),
+        exp_exts=('.csv',),
+        df_from_path=df_from_tdt),
 }
 
 
@@ -93,7 +92,7 @@ def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
 
     if ext is not None and kind is None:
         kind = kind_from_extension(ext)
-    if kind == DataKind.RAW or kind == DataKind.PROCESSED:
+    if kind in DATA_KINDS:
         return DataFiles(DATA_KINDS[kind])
     elif kind == DataKind.META:
         return get_meta_df()
