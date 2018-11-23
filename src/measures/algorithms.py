@@ -10,10 +10,11 @@ import mne
 import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from lib.HiguchiFractalDimension import hfd
-from lib.nolitsa.nolitsa.d2 import c2_embed, d2
+from lib.nolitsa.nolitsa.d2 import c2_embed, d2, ttmle
+from lib.nolitsa.nolitsa.delay import acorr, dmi
 from lib.nolitsa.nolitsa.dimension import fnn
 from lib.nolitsa.nolitsa.lyapunov import mle_embed
-from lib.nolitsa.nolitsa.delay import acorr, dmi
+from lib.nolitsa.nolitsa.surrogates import iaaft
 
 registered_algos = []
 measure_names = []
@@ -55,7 +56,7 @@ def compute_embedding_dimension(data, tau, window):
     return np.argmin(fnns[2])
 
 
-@register('tau_mi')
+# @register('tau_mi')
 @log_result
 def compute_tau_via_mi(data):
     def localmin(x):
@@ -66,7 +67,7 @@ def compute_tau_via_mi(data):
     return mi_mins[0] if len(mi_mins) > 0 else np.nan
 
 
-@register('tau_acorr')
+# @register('tau_acorr')
 @log_result
 def compute_tau_via_acorr(data):
     maxtau = 20
@@ -156,3 +157,38 @@ def compute_higuchi(data):
             hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
         win_beg += win_shift
     return sum(results)/len(results)
+
+
+# @register('sigma_lyap')
+@log_result
+def compute_sigma_lyap(data):
+    surrogates = [iaaft(data)[0] for _ in range(19)]
+    true_lyap = compute_lyap(data)
+    lyaps = [compute_lyap(surrogate) for surrogate in surrogates]
+    return np.abs(np.mean(lyaps)-true_lyap) / np.std(lyaps)
+
+
+@register('sigma_mle')
+@log_result
+def compute_sigma_mle(data):
+    mle = np.empty(19)
+
+    tau = 1
+    window = 50
+    dim = compute_embedding_dimension(data, tau, window)
+
+    for k in range(19):
+        y = iaaft(data)[0]
+        r, c = c2_embed(data, dim=[dim], tau=tau, window=window)[0]
+
+        r_mle, mle_surr = ttmle(r, c, zero=False)
+        i = np.argmax(r_mle > 0.5 * np.std(y))
+        mle[k] = mle_surr[i]
+
+    r, c = c2_embed(data, dim=[dim], tau=tau, window=window)[0]
+
+    r_mle, true_mle = ttmle(r, c, zero=False)
+    i = np.argmax(r_mle > 0.5 * np.std(data))
+    true_mle = true_mle[i]
+
+    return np.abs(np.mean(mle)-true_mle) / np.std(mle)
