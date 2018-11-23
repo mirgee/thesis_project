@@ -44,7 +44,7 @@ def create_training_data(output_path, kind):
 
 @click.command()
 @click.option('--fname', type=str, default='measures.pkl')
-@click.option('--kind', type=str, default=DataKind.PROCESSED)
+@click.option('--kind', type=str, default='processed')
 def main(fname, kind):
     logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.ERROR)

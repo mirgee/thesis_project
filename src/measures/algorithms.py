@@ -13,6 +13,7 @@ from lib.HiguchiFractalDimension import hfd
 from lib.nolitsa.nolitsa.d2 import c2_embed, d2
 from lib.nolitsa.nolitsa.dimension import fnn
 from lib.nolitsa.nolitsa.lyapunov import mle_embed
+from lib.nolitsa.nolitsa.delay import acorr, dmi
 
 registered_algos = []
 measure_names = []
@@ -54,7 +55,26 @@ def compute_embedding_dimension(data, tau, window):
     return np.argmin(fnns[2])
 
 
-@register('lyap')
+@register('tau_mi')
+@log_result
+def compute_tau_via_mi(data):
+    def localmin(x):
+        return (np.diff(np.sign(np.diff(x))) > 0).nonzero()[0] + 1
+    maxtau = 20
+    i = dmi(data, maxtau=maxtau)
+    mi_mins = localmin(i)
+    return mi_mins[0] if len(mi_mins) > 0 else np.nan
+
+
+@register('tau_acorr')
+@log_result
+def compute_tau_via_acorr(data):
+    maxtau = 20
+    r = acorr(data, maxtau=maxtau)
+    return np.argmax(r < (1 - 1.0 / np.e))
+
+
+# @register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', use_fnn=True):
     dim = 8
