@@ -179,7 +179,7 @@ def compute_sigma_mle(data):
 
     for k in range(19):
         y = iaaft(data)[0]
-        r, c = c2_embed(data, dim=[dim], tau=tau, window=window)[0]
+        r, c = c2_embed(y, dim=[dim], tau=tau, window=window)[0]
 
         r_mle, mle_surr = ttmle(r, c, zero=False)
         i = np.argmax(r_mle > 0.5 * np.std(y))

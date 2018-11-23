@@ -55,7 +55,7 @@ def main(fname, kind):
     if os.path.isfile(fpath):
         logging.warning(f'File {fpath} exists and will be overwritten.')
     create_training_data(fpath, DataKind(kind))
-
+    logging.info('Finished procedure.')
 
 if __name__ == '__main__':
     main()
