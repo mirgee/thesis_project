@@ -1,0 +1,7 @@
+data/* filter=lfs
+*.key filter=git-crypt diff=git-crypt
+*.tdt filter=git-crypt diff=git-crypt
+*.fif filter=git-crypt diff=git-crypt
+*.pkl filter=git-crypt diff=git-crypt
+*.csv filter=git-crypt diff=git-crypt
+*.xlsx filter=git-crypt diff=git-crypt

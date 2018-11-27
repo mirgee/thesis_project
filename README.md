@@ -8,14 +8,28 @@ Add absolute path to `thesis_project/src/` folder to your `PYTHONPATH` env varia
 export PYTHONPATH=$PYTHONPATH:{full_path_to_repo}/thesis_project/src/
 ```
 
-Also, copy the `.tdt` files and excel metadata to the `thesis_project/data/raw`
-folder.
+You may also want to add this to your `.bashrc`, so that the variable stays set after user logout:
+```
+echo "PYTHONPATH=$PYTHONPATH:{full_path_to_repo}/thesis_project/src/" >> ~/.bashrc
+```
 
 Install dependencies into a conda environment:
 ```
 conda env update -f thesis.yml
 conda activate thesis
 pip3 install -r requirements.txt
+```
+
+I use [git-lfs](https://git-lfs.github.com/) for the datafiles. You may need to run
+```
+git lfs install
+git lfs update
+git lfs fetch
+```
+
+All the sensitive data in the repository is encoded using `git-crypt`. If you want access, please, send me an email and I will send you a keyfile. After [installing](https://www.agwa.name/projects/git-crypt/) `git-crypt`, simply run
+```
+git-crypt unlock /path/to/keyfile
 ```
 
 ## How to run a specific file
