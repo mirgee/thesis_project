@@ -8,9 +8,9 @@ import measures.algorithms as algos
 from config import LABELED_ROOT
 
 
-def create_bef_aft_df(output_path, measure='all', format='pkl'):
+def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
     df = pd.read_pickle(
-        os.path.join(LABELED_ROOT, measure, f'training_{measure}.pkl'))
+        os.path.join(output_path, f'training_{measure}.pkl'))
     logging.debug(f'TRAINING DF FOR {measure.upper()}:\n{df}')
     if isinstance(df.columns, pd.core.index.MultiIndex):
         col = slice(None) if measure == 'all' else measure
@@ -18,7 +18,7 @@ def create_bef_aft_df(output_path, measure='all', format='pkl'):
         df.columns = df.columns.droplevel(1)
         df = df.astype(float)
 
-    df_y = pd.read_pickle(os.path.join(LABELED_ROOT, 'meta', 'meta.pkl'))
+    df_y = pd.read_pickle(os.path.join(LABELED_ROOT, kind, 'meta', 'meta.pkl'))
     if set(df_y.columns).isdisjoint(set(df.columns)):
         df = df.join(df_y)
 
@@ -34,20 +34,20 @@ def create_bef_aft_df(output_path, measure='all', format='pkl'):
 
     if format == 'csv':
         df_bef.to_csv(
-            os.path.join(LABELED_ROOT, measure, f'{measure}_bef.csv'))
+            os.path.join(output_path, f'{measure}_bef.csv'))
         df_aft.to_csv(
-            os.path.join(LABELED_ROOT, measure, f'{measure}_aft.csv'))
+            os.path.join(output_path, f'{measure}_aft.csv'))
         if measure is not 'all':
             df.to_csv(
-                os.path.join(LABELED_ROOT, measure, f'training_{measure}.csv'))
+                os.path.join(output_path, f'training_{measure}.csv'))
     elif format == 'pkl':
         df_bef.to_pickle(
-            os.path.join(LABELED_ROOT, measure, f'{measure}_bef.pkl'))
+            os.path.join(output_path, f'{measure}_bef.pkl'))
         df_aft.to_pickle(
-            os.path.join(LABELED_ROOT, measure, f'{measure}_aft.pkl'))
+            os.path.join(output_path, f'{measure}_aft.pkl'))
         if measure is not 'all':
             df.to_pickle(
-                os.path.join(LABELED_ROOT, measure, f'training_{measure}.pkl'))
+                os.path.join(output_path, f'training_{measure}.pkl'))
     else:
         raise NotImplementedError(f'Format {format} not supported.')
 
@@ -58,19 +58,21 @@ def create_bef_aft_df(output_path, measure='all', format='pkl'):
 
 @click.command()
 @click.option('--format', type=str, default='pkl')
-def main(format):
+@click.option('--kind', type=str, default='processed')
+def main(format, kind):
     logging.basicConfig(level=logging.DEBUG)
 
     logging.info('Creating before and after dataframes.')
 
     for measure in algos.measure_names + ['all']:
-        output_path = os.path.join(LABELED_ROOT, measure)
+        output_path = os.path.join(LABELED_ROOT, kind, measure)
         try:
-            create_bef_aft_df(output_path, measure, format)
+            create_bef_aft_df(output_path, kind, measure, format)
             logging.info(f'Successfully created before and after file for '
                          f'{measure}.')
         except FileNotFoundError:
-            logging.info(f'File for measure {measure} not found, skipping.')
+            logging.info(f'File for measure {measure} not found on path '
+                         f'{output_path}, skipping.')
 
 
 if __name__ == '__main__':
