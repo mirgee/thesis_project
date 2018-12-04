@@ -44,7 +44,7 @@ def register(algo_name):
     return decorator
 
 
-# @register('emdim')
+@register('emdim')
 @log_result
 def compute_embedding_dimension(data, tau, window):
     R = 3.0
@@ -56,7 +56,7 @@ def compute_embedding_dimension(data, tau, window):
     return np.argmin(fnns[2])
 
 
-# @register('tau_mi')
+@register('tau_mi')
 @log_result
 def compute_tau_via_mi(data):
     def localmin(x):
@@ -98,7 +98,7 @@ def compute_lyapunov(data, lib='nolitsa', use_fnn=True):
     return lyap
 
 
-# @register('corr')
+@register('corr')
 @log_result
 def compute_corr_dim(data, lib='nolitsa'):
     dims = list(range(3, 10))
@@ -125,25 +125,25 @@ def compute_corr_dim(data, lib='nolitsa'):
     return corr_dim
 
 
-# @register('dfa')
+@register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
 
 
-# @register('hurst')
+@register('hurst')
 @log_result
 def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-# @register('sampen')
+@register('sampen')
 @log_result
 def compute_sampen(data):
     return nolds.sampen(data, emb_dim=EMBED_DIM)
 
 
-# @register('higu')
+@register('higu')
 @log_result
 def compute_higuchi(data):
     num_k = 50
@@ -159,7 +159,7 @@ def compute_higuchi(data):
     return sum(results)/len(results)
 
 
-# @register('sigma_lyap')
+@register('sigma_lyap')
 @log_result
 def compute_sigma_lyap(data):
     surrogates = [iaaft(data)[0] for _ in range(19)]
