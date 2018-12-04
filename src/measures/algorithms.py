@@ -67,7 +67,7 @@ def compute_tau_via_mi(data):
     return mi_mins[0] if len(mi_mins) > 0 else np.nan
 
 
-# @register('tau_acorr')
+@register('tau_acorr')
 @log_result
 def compute_tau_via_acorr(data):
     maxtau = 20
@@ -75,7 +75,7 @@ def compute_tau_via_acorr(data):
     return np.argmax(r < (1 - 1.0 / np.e))
 
 
-# @register('lyap')
+@register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', use_fnn=True):
     dim = 8
@@ -168,7 +168,7 @@ def compute_sigma_lyap(data):
     return np.abs(np.mean(lyaps)-true_lyap) / np.std(lyaps)
 
 
-@register('sigma_mle')
+# @register('sigma_mle')
 @log_result
 def compute_sigma_mle(data):
     mle = np.empty(19)
