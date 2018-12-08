@@ -11,9 +11,10 @@ import mne
 import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from lib.HiguchiFractalDimension import hfd
+from lib.nolitsa.nolitsa.utils import statcheck
 from lib.nolitsa.nolitsa.d2 import c2_embed, d2, ttmle
-from lib.nolitsa.nolitsa.delay import acorr, dmi
-from lib.nolitsa.nolitsa.dimension import fnn
+from lib.nolitsa.nolitsa.delay import acorr, adfd, dmi
+from lib.nolitsa.nolitsa.dimension import afn, fnn
 from lib.nolitsa.nolitsa.lyapunov import mle_embed
 from lib.nolitsa.nolitsa.surrogates import iaaft
 
@@ -45,7 +46,7 @@ def register(algo_name):
     return decorator
 
 
-@register('fnn')
+# @register('fnn')
 @log_result
 def compute_dim_via_fnn(data, tau=3, window=50):
     R = 2.5
@@ -57,17 +58,17 @@ def compute_dim_via_fnn(data, tau=3, window=50):
     return np.argmin(fnns[2])
 
 
-@register('afn')
+# @register('afn')
 @log_result
 def compute_dim_via_afn(data, tau=3, window=50):
     dims_to_try = np.arange(1, 18)
-    E, _ = dimension.afn(
+    E, _ = afn(
         data, tau=tau, dim=dims_to_try, window=window, metric='euclidean')
     E1 = E[1:] / E[:-1]
     return np.argmax(np.diff(E1) < 0.008)
 
 
-@register('tau_mi')
+# @register('tau_mi')
 @log_result
 def compute_tau_via_mi(data):
     def localmin(x):
@@ -78,27 +79,27 @@ def compute_tau_via_mi(data):
     return mi_mins[0] if len(mi_mins) > 0 else np.nan
 
 
-@register('tau_acorr')
+# @register('tau_acorr')
 @log_result
 def compute_tau_via_acorr(data):
     maxtau = 20
     r = acorr(data, maxtau=maxtau)
-    return np.argmax(r < (1 - 1.0 / np.e))
+    return np.argmax(r < (1 - 1.0 / np.e)) + 1
 
 
-@register('tau_adfd')
+# @register('tau_adfd')
 @log_result
 def compute_tau_via_adfd(data, dim=10):
     maxtau = 20
-    disp = delay.adfd(x, dim=dim, maxtau=maxtau)
+    disp = adfd(data, dim=dim, maxtau=maxtau)
     ddisp = np.diff(disp)
     forty = np.argmax(ddisp < 0.4 * ddisp[1])
-    return ddisp[forty][0]
+    return ddisp[forty]
 
 
 @register('lyap')
 @log_result
-def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
+def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     dim = 8
     tau = 1
     window = 50
@@ -170,17 +171,20 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
             return np.nan
 
         tau_acorr = compute_tau_via_acorr(data)
-        tau_adfd = compute_tau_via_adfd(data)
-        tau = max(min(math.ceil((tau_acorr + tau_adfd) / 2), 5), 3)
+
+        # tau_adfd = compute_tau_via_adfd(data)
+        tau = max(min(tau_acorr, 5), 3)
 
         dim_fnn = compute_dim_via_fnn(data, tau, window)
         dim_afn = compute_dim_via_afn(data, tau, window)
         dim = max(min(math.ceil((dim_fnn + dim_afn) / 2), 18), 5)
+        # Just to verify that adfd gives similar result for chosen dim
+        tau_adfd = compute_tau_via_adfd(data, dim)
 
         maxt = tau_dim_to_maxt[(tau, dim)]
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
-        poly = np.polyfit(np.arange(len(res)), res, 1)
+        poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
         lyap = poly[0]
     elif lib == 'nolds':
         lyap = nolds.lyap_r(data, emb_dim=dim, lag=tau, min_tsep=window,
@@ -190,7 +194,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
 def compute_corr_dim(data, lib='nolitsa'):
     dims = list(range(3, 10))
@@ -217,25 +221,25 @@ def compute_corr_dim(data, lib='nolitsa'):
     return corr_dim
 
 
-@register('dfa')
+# @register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
 
 
-@register('hurst')
+# @register('hurst')
 @log_result
 def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-@register('sampen')
+# @register('sampen')
 @log_result
 def compute_sampen(data):
     return nolds.sampen(data, emb_dim=EMBED_DIM)
 
 
-@register('higu')
+# @register('higu')
 @log_result
 def compute_higuchi(data):
     num_k = 50
@@ -251,7 +255,7 @@ def compute_higuchi(data):
     return sum(results)/len(results)
 
 
-@register('sigma_lyap')
+# @register('sigma_lyap')
 @log_result
 def compute_sigma_lyap(data):
     surrogates = [iaaft(data)[0] for _ in range(19)]
@@ -260,7 +264,7 @@ def compute_sigma_lyap(data):
     return np.abs(np.mean(lyaps)-true_lyap) / np.std(lyaps)
 
 
-# @register('sigma_mle')
+# # @register('sigma_mle')
 @log_result
 def compute_sigma_mle(data):
     mle = np.empty(19)
@@ -294,7 +298,7 @@ def find_least_stationary_window(x, win_width=5000, slide_width=100):
 
     while end < len(x):
         w = x[start:end]
-        p_value = utils.statcheck(w)[1]
+        p_value = statcheck(w)[1]
         if p_value < min_p_value:
             min_p_value = p_value
             min_start, min_end = start, end
