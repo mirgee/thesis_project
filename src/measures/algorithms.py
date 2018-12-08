@@ -260,7 +260,7 @@ def compute_sigma_lyap(data):
     return np.abs(np.mean(lyaps)-true_lyap) / np.std(lyaps)
 
 
-@register('sigma_mle')
+# @register('sigma_mle')
 @log_result
 def compute_sigma_mle(data):
     mle = np.empty(19)
