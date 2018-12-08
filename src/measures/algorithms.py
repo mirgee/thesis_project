@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 from functools import wraps
 
@@ -44,16 +45,26 @@ def register(algo_name):
     return decorator
 
 
-@register('emdim')
+@register('fnn')
 @log_result
-def compute_embedding_dimension(data, tau, window):
-    R = 3.0
-    A = 0.5
-    dims_to_try = np.arange(1, 15)
+def compute_dim_via_fnn(data, tau=3, window=50):
+    R = 2.5
+    A = 2.0
+    dims_to_try = np.arange(1, 18)
     fnns = fnn(data, dim=dims_to_try, R=R, A=A, tau=tau, window=window,
                metric='euclidean')
     # Return the dimension with lowest number of FNN with both tests applied
     return np.argmin(fnns[2])
+
+
+@register('afn')
+@log_result
+def compute_dim_via_afn(data, tau=3, window=50):
+    dims_to_try = np.arange(1, 18)
+    E, _ = dimension.afn(
+        data, tau=tau, dim=dims_to_try, window=window, metric='euclidean')
+    E1 = E[1:] / E[:-1]
+    return np.argmax(np.diff(E1) < 0.008)
 
 
 @register('tau_mi')
@@ -75,17 +86,98 @@ def compute_tau_via_acorr(data):
     return np.argmax(r < (1 - 1.0 / np.e))
 
 
+@register('tau_adfd')
+@log_result
+def compute_tau_via_adfd(data, dim=10):
+    maxtau = 20
+    disp = delay.adfd(x, dim=dim, maxtau=maxtau)
+    ddisp = np.diff(disp)
+    forty = np.argmax(ddisp < 0.4 * ddisp[1])
+    return ddisp[forty][0]
+
+
 @register('lyap')
 @log_result
-def compute_lyapunov(data, lib='nolitsa', use_fnn=True):
+def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     dim = 8
     tau = 1
     window = 50
     maxt = 15
     sampl_period = 1/250
-    if use_fnn:
-        # When no lag specified, it is found via autocorrelation method
-        dim = compute_embedding_dimension(data, tau, window)
+    tau_dim_to_maxt = {
+        (2, 5): 12,
+        (2, 6): 14,
+        (2, 7): 16,
+        (2, 8): 18,
+        (2, 9): 20,
+        (2, 10): 22,
+        (2, 11): 23,
+        (2, 12): 25,
+        (2, 13): 27,
+        (2, 14): 28,
+        (2, 15): 30,
+        (2, 16): 33,
+        (2, 17): 35,
+        (2, 18): 37,
+        (3, 5): 15,
+        (3, 6): 18,
+        (3, 7): 22,
+        (3, 8): 25,
+        (3, 9): 28,
+        (3, 10): 30,
+        (3, 11): 33,
+        (3, 12): 38,
+        (3, 13): 42,
+        (3, 14): 46,
+        (3, 15): 50,
+        (3, 16): 55,
+        (3, 17): 60,
+        (3, 18): 65,
+        (4, 5): 20,
+        (4, 6): 24,
+        (4, 7): 28,
+        (4, 8): 32,
+        (4, 9): 36,
+        (4, 10): 40,
+        (4, 11): 44,
+        (4, 12): 48,
+        (4, 13): 52,
+        (4, 14): 56,
+        (4, 15): 60,
+        (4, 16): 64,
+        (4, 17): 68,
+        (4, 18): 72,
+        (5, 5): 25,
+        (5, 6): 30,
+        (5, 7): 35,
+        (5, 8): 40,
+        (5, 9): 45,
+        (5, 10): 50,
+        (5, 11): 55,
+        (5, 12): 60,
+        (5, 13): 65,
+        (5, 14): 70,
+        (5, 15): 75,
+        (5, 16): 80,
+        (5, 17): 85,
+        (5, 18): 90,
+    }
+    if autoselect_params:
+        try:
+            data, _ = find_least_stationary_window(
+                data, win_width=15000, slide_width=100)
+        except AssertionError:
+            return np.nan
+
+        tau_acorr = compute_tau_via_acorr(data)
+        tau_adfd = compute_tau_via_adfd(data)
+        tau = max(min(math.ceil((tau_acorr + tau_adfd) / 2), 5), 3)
+
+        dim_fnn = compute_dim_via_fnn(data, tau, window)
+        dim_afn = compute_dim_via_afn(data, tau, window)
+        dim = max(min(math.ceil((dim_fnn + dim_afn) / 2), 18), 5)
+
+        maxt = tau_dim_to_maxt[(tau, dim)]
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res, 1)
@@ -192,3 +284,21 @@ def compute_sigma_mle(data):
     true_mle = true_mle[i]
 
     return np.abs(np.mean(mle)-true_mle) / np.std(mle)
+
+
+@log_result
+def find_least_stationary_window(x, win_width=5000, slide_width=100):
+    assert len(x) > win_width
+    start, end, min_start, min_end = 0, win_width, 0, 0
+    min_p_value = np.inf
+
+    while end < len(x):
+        w = x[start:end]
+        p_value = utils.statcheck(w)[1]
+        if p_value < min_p_value:
+            min_p_value = p_value
+            min_start, min_end = start, end
+        start += slide_width
+        end += slide_width
+
+    return x[min_start:min_end], min_p_value
