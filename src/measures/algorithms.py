@@ -11,7 +11,7 @@ import mne
 import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from lib.HiguchiFractalDimension import hfd
-from lib.nolitsa.nolitsa.utils import statcheck
+from lib.nolitsa.nolitsa.utils import statcheck, gprange
 from lib.nolitsa.nolitsa.d2 import c2_embed, d2, ttmle
 from lib.nolitsa.nolitsa.delay import acorr, adfd, dmi
 from lib.nolitsa.nolitsa.dimension import afn, fnn
@@ -97,7 +97,7 @@ def compute_tau_via_adfd(data, dim=10):
     return ddisp[forty]
 
 
-@register('lyap')
+# @register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     dim = 8
@@ -194,19 +194,42 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     return lyap
 
 
-# @register('corr')
+@register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa'):
-    dims = list(range(3, 10))
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
+    def smooth(y, box_pts):
+        box = np.ones(box_pts)/box_pts
+        y_smooth = np.convolve(y, box, mode='same')
+        return y_smooth
+    dim = 10
+    dims = np.arange(2, 30)
     tau = 3
-    window = 100
+    window = 50
     maxt = 30
+    rs = gprange(0.05, 5, 100)
     if lib == 'nolitsa':
-        for dim in dims:
-            r, c = c2_embed(data, dim=[dim], tau=tau, r=100,
+        if autoselect_params:
+            try:
+                data, _ = find_least_stationary_window(
+                    data, win_width=15000, slide_width=100)
+            except AssertionError:
+                return np.nan
+            tau = compute_tau_via_acorr(data)
+            rcs = c2_embed(data, dim=dims, tau=tau, r=rs,
+                           metric='chebyshev', window=window)
+            d2s = [np.polyfit(np.log(r), np.log(c), 1) for r, c in rcs]
+            d2s = smooth(d2s)
+            diffs = np.diff(slopes, 2)
+            sums = np.asarray(
+                [sum(diffs[i:i+5]) for i, _ in enumerate(diffs[:-5])])
+            sums = np.asarray(
+                [np.abs(max(diffs[i-2:i+3]) - min(diffs[i-2:i+3]))
+                 for i in range(2, len(diffs)-3)])
+            return d2s[np.argmin(sums)]
+        else:
+            r, c = c2_embed(data, dim=[dim], tau=tau, r=rs,
                             metric='chebyshev', window=window)[0]
-            d = d2(r, c, hwin=3)
-            return sum(d[:maxt])/maxt
+            return np.polyfit(np.log(r), np.log(c), 1)[0]
     elif lib == 'nolds':
         prev_val = 0
         for dim in dims:
