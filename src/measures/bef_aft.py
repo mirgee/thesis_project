@@ -57,14 +57,15 @@ def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
 
 
 @click.command()
+@click.argument('measures', nargs=-1, type=str)
 @click.option('--format', type=str, default='pkl')
 @click.option('--kind', type=str, default='processed')
-def main(format, kind):
+def main(measures, format, kind):
     logging.basicConfig(level=logging.DEBUG)
 
     logging.info('Creating before and after dataframes.')
 
-    for measure in algos.measure_names + ['all']:
+    for measure in measures + ('all',):
         output_path = os.path.join(LABELED_ROOT, kind, measure)
         try:
             create_bef_aft_df(output_path, kind, measure, format)
