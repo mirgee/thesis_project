@@ -34,7 +34,7 @@ def compute_nl(df, window=None, minl=0, maxl=None):
                 start += window.slide
                 chunk_num += 1
         elif len(data) > minl:
-            length = min(maxl, len(data))
+            length = len(data) if maxl is None else min(maxl, len(data))
             new_row.update({
                 (channel, f.algo_name): f(data[:length])
                 for f in algos.registered_algos
@@ -43,7 +43,8 @@ def compute_nl(df, window=None, minl=0, maxl=None):
     return new_row
 
 
-def create_training_data(output_path, kind, window=None, minl=0, maxl=None):
+def create_training_data(output_path, kind, window=None, minl=0, maxl=None,
+                         existing_df=None):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data.')
 
@@ -56,15 +57,19 @@ def create_training_data(output_path, kind, window=None, minl=0, maxl=None):
     else:
         idxs = pd.MultiIndex.from_product([list(range(1, 134)), ['a', 'b']],
                                           names=['patient', 'trial'])
-    main_df = pd.DataFrame(columns=cols, index=idxs)
+    main_df = pd.DataFrame(columns=cols, index=idxs) if existing_df is None \
+        else existing_df
 
     for file in files_builder(kind):
-        new_row = compute_nl(file.df, window, minl, maxl)
-        main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
-        logging.debug("New row: \n%s" % new_row)
-
-        logging.debug(f'Saving training data at {output_path}.')
-        main_df.to_pickle(output_path)
+        if main_df.loc[(file.id, file.trial)].isnull().values.any():
+            new_row = compute_nl(file.df, window, minl, maxl)
+            main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
+            logging.debug("New row: \n%s" % new_row)
+            logging.debug(f'Saving training data at {output_path}.')
+            main_df.to_pickle(output_path)
+        else:
+            logging.debug(f"Skipping row ({file.id}, {file.trial})")
+            continue
 
 
 @click.command()
@@ -79,13 +84,16 @@ def main(fname, kind, ww, ws, minl, maxl):
     mne.set_log_level(logging.ERROR)
 
     window = Window(ww, ws) if ww > 0 else None
+    existing_df = None
 
     output_path = os.path.join(LABELED_ROOT, kind)
     assert os.path.exists(output_path), output_path
     fpath = os.path.join(output_path, fname)
     if os.path.isfile(fpath):
-        logging.warning(f'File {fpath} exists and will be overwritten.')
-    create_training_data(fpath, DataKind(kind), window, minl, maxl)
+        logging.warning(f'File {fpath} exists. We will try to extend it.')
+        existing_df = pd.read_pickle(fpath)
+    create_training_data(
+        fpath, DataKind(kind), window, minl, maxl, existing_df)
     logging.info('Finished procedure.')
 
 
