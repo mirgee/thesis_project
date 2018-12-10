@@ -196,7 +196,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
 
 @register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
     def smooth(y, box_pts):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
@@ -217,7 +217,8 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
             tau = compute_tau_via_acorr(data)
             rcs = c2_embed(data, dim=dims, tau=tau, r=rs,
                            metric='chebyshev', window=window)
-            d2s = [np.polyfit(np.log(r), np.log(c), 1)[0] for (r, c) in rcs]
+            d2s = [np.polyfit(np.log(r), np.log(c), 1)[0] for (r, c) in rcs
+                   if len(r) > 0 and len(c) > 0]
             d2s = smooth(d2s, 2)
             diffs = np.diff(d2s)
             sums = np.asarray(
