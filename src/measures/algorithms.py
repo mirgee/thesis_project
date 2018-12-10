@@ -196,7 +196,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
 
 @register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     def smooth(y, box_pts):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
@@ -223,12 +223,13 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
                            metric='chebyshev', window=window)
             d2s = [np.polyfit(np.log(r), np.log(c), 1)[0] for (r, c) in rcs
                    if len(r) > 0 and len(c) > 0]
-            d2s = smooth(d2s, 2)
-            diffs = np.diff(d2s)
-            sums = np.asarray(
-                [np.abs(max(diffs[i-2:i+3]) - min(diffs[i-2:i+3]))
-                 for i in range(2, len(diffs)-3)])
-            return d2s[np.argmin(sums)]
+            # d2s = smooth(d2s, 2)
+            # diffs = np.diff(d2s)
+            # sums = np.asarray(
+            #     [np.abs(max(diffs[i-2:i+3]) - min(diffs[i-2:i+3]))
+            #      for i in range(2, len(diffs)-3)])
+            # return d2s[np.argmin(sums)]
+            return d2s[np.argmax(d2s)]
         else:
             try:
                 data = data[:15000]
