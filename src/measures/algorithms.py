@@ -201,6 +201,7 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
         return y_smooth
+
     dim = 10
     dims = np.arange(2, 30 + 1)
     tau = 3
@@ -215,7 +216,10 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
             except AssertionError:
                 return np.nan
             tau = compute_tau_via_acorr(data)
-            rcs = c2_embed(data, dim=dims, tau=tau, r=rs,
+            # By passing integer r, we are using method for automatic selection
+            # of range suggested by Galka (with our modified version of the
+            # nolitsa library)
+            rcs = c2_embed(data, dim=dims, tau=tau, r=100,
                            metric='chebyshev', window=window)
             d2s = [np.polyfit(np.log(r), np.log(c), 1)[0] for (r, c) in rcs
                    if len(r) > 0 and len(c) > 0]
