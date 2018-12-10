@@ -20,7 +20,7 @@ from lib.nolitsa.nolitsa.surrogates import iaaft
 
 registered_algos = []
 measure_names = []
-EMBED_DIM = 10
+MIN_LEN = 250*60
 
 
 def log_result(f):
@@ -41,7 +41,9 @@ def register(algo_name):
         registered_algos.append(f)
 
         @wraps(f)
-        def wrapper(*args, **kwargs):
+        def wrapper(data, *args, **kwargs):
+            if len(data) < MIN_LEN:
+                return np.nan
             return f
     return decorator
 
@@ -210,11 +212,9 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     rs = gprange(0.05, 10, 100)
     if lib == 'nolitsa':
         if autoselect_params:
-            try:
+            if len(data) > 15000:
                 data, _ = find_least_stationary_window(
                     data, win_width=15000, slide_width=100)
-            except AssertionError:
-                return np.nan
             tau = compute_tau_via_acorr(data)
             # By passing integer r, we are using method for automatic selection
             # of range suggested by Galka (with our modified version of the
@@ -231,10 +231,6 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
             # return d2s[np.argmin(sums)]
             return d2s[np.argmax(d2s)]
         else:
-            try:
-                data = data[:15000]
-            except IndexError:
-                return np.nan
             r, c = c2_embed(data, dim=[dim], tau=tau, r=rs,
                             metric='chebyshev', window=window)[0]
             return np.polyfit(np.log(r), np.log(c), 1)[0]
