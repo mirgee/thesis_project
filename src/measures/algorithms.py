@@ -20,7 +20,6 @@ from lib.nolitsa.nolitsa.surrogates import iaaft
 
 registered_algos = []
 measure_names = []
-MIN_LEN = 250*60
 
 
 def log_result(f):
@@ -42,8 +41,6 @@ def register(algo_name):
 
         @wraps(f)
         def wrapper(data, *args, **kwargs):
-            if len(data) < MIN_LEN:
-                return np.nan
             return f
     return decorator
 
@@ -196,7 +193,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
 def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     def smooth(y, box_pts):
@@ -248,7 +245,7 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     return corr_dim
 
 
-# @register('dfa')
+@register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
@@ -271,8 +268,8 @@ def compute_sampen(data):
 def compute_higuchi(data):
     num_k = 50
     k_max = 50
-    win_width = 1500
-    win_shift = 200
+    win_width = 5*250
+    win_shift = 125
     win_beg = 0
     results = []
     while win_beg+win_width < len(data):

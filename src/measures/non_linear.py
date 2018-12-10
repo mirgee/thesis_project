@@ -16,13 +16,13 @@ class Window(NamedTuple):
     slide: int
 
 
-def compute_nl(df, window=None):
+def compute_nl(df, window=None, minl=0, maxl=None):
     """Compute dict of non-linear features for trial recorded in file_name"""
     new_row = {}
 
     for channel in CHANNEL_NAMES:
         data = df[channel].values
-        if window.width > 0:
+        if window is not None and window.width > 0:
             start = 0
             chunk_num = 0
             while start+window.width < len(data):
@@ -33,16 +33,17 @@ def compute_nl(df, window=None):
                 })
                 start += window.slide
                 chunk_num += 1
-        else:
+        elif len(data) > minl:
+            length = min(maxl, len(data))
             new_row.update({
-                (channel, f.algo_name): f(data)
+                (channel, f.algo_name): f(data[:length])
                 for f in algos.registered_algos
             })
 
     return new_row
 
 
-def create_training_data(output_path, kind, window=None):
+def create_training_data(output_path, kind, window=None, minl=0, maxl=None):
     """Create a dataframe with features and labels suitable for training."""
     logging.info('Creating training data.')
 
@@ -58,7 +59,7 @@ def create_training_data(output_path, kind, window=None):
     main_df = pd.DataFrame(columns=cols, index=idxs)
 
     for file in files_builder(kind):
-        new_row = compute_nl(file.df, window)
+        new_row = compute_nl(file.df, window, minl, maxl)
         main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
         logging.debug("New row: \n%s" % new_row)
 
@@ -69,9 +70,11 @@ def create_training_data(output_path, kind, window=None):
 @click.command()
 @click.option('--ww', type=int, default=0)
 @click.option('--ws', type=int, default=100)
+@click.option('--minl', type=int, default=0)
+@click.option('--maxl', type=int, default=None)
 @click.option('--fname', type=str, default='measures.pkl')
 @click.option('--kind', type=str, default='processed')
-def main(fname, kind, ww, ws):
+def main(fname, kind, ww, ws, minl, maxl):
     logging.basicConfig(level=logging.DEBUG)
     mne.set_log_level(logging.ERROR)
 
@@ -82,7 +85,7 @@ def main(fname, kind, ww, ws):
     fpath = os.path.join(output_path, fname)
     if os.path.isfile(fpath):
         logging.warning(f'File {fpath} exists and will be overwritten.')
-    create_training_data(fpath, DataKind(kind), window)
+    create_training_data(fpath, DataKind(kind), window, minl, maxl)
     logging.info('Finished procedure.')
 
 
