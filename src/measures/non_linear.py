@@ -66,6 +66,7 @@ def create_training_data(output_path, kind, window=None, minl=0, maxl=None,
             main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
             logging.debug("New row: \n%s" % new_row)
             logging.debug(f'Saving training data at {output_path}.')
+            logging.info(f'Processed file {file.number}')
             main_df.to_pickle(output_path)
         else:
             logging.debug(f"Skipping row ({file.id}, {file.trial})")
