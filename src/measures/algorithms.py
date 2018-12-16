@@ -245,7 +245,7 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     return corr_dim
 
 
-@register('dfa')
+# @register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
@@ -257,10 +257,10 @@ def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-# @register('sampen')
+@register('sampen')
 @log_result
 def compute_sampen(data):
-    return nolds.sampen(data, emb_dim=EMBED_DIM)
+    return nolds.sampen(data, emb_dim=2)
 
 
 # @register('higu')
