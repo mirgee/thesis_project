@@ -264,10 +264,10 @@ def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-# @register('sampen')
+@register('sampen')
 @log_result
 def compute_sampen(data):
-    return nolds.sampen(data, emb_dim=EMBED_DIM)
+    return nolds.sampen(data, emb_dim=2)
 
 
 # @register('higu')
