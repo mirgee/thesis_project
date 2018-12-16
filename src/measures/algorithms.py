@@ -104,6 +104,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     window = 50
     maxt = 15
     sampl_period = 1/250
+
     tau_dim_to_maxt = {
         (2, 5): 12,
         (2, 6): 14,
@@ -162,6 +163,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
         (5, 17): 85,
         (5, 18): 90,
     }
+
     if autoselect_params:
         try:
             data, _ = find_least_stationary_window(
@@ -193,9 +195,9 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
     return lyap
 
 
-# @register('corr')
+@register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
     def smooth(y, box_pts):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
@@ -230,7 +232,10 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
         else:
             r, c = c2_embed(data, dim=[dim], tau=tau, r=rs,
                             metric='chebyshev', window=window)[0]
-            return np.polyfit(np.log(r), np.log(c), 1)[0]
+            if len(r) > 0 and len(c) > 0:
+                return np.polyfit(np.log(r), np.log(c), 1)[0]
+            else:
+                return np.nan
     elif lib == 'nolds':
         prev_val = 0
         for dim in dims:
@@ -245,7 +250,7 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     return corr_dim
 
 
-@register('dfa')
+# @register('dfa')
 @log_result
 def compute_dfa(data):
     return nolds.dfa(data)
