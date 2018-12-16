@@ -80,7 +80,7 @@ DATA_KINDS = {
 }
 
 
-File = namedtuple('File', 'df path id trial name kind')
+File = namedtuple('File', 'df path id trial name kind number')
 
 
 def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
@@ -105,23 +105,25 @@ def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
 class DataFiles:
 
     def __init__(self, kind, shuffle=False):
+        assert os.path.isdir(kind.data_folder)
         self.kind = kind.name
         self.exp_exts = kind.exp_exts
         self.data_folder = kind.data_folder
         self.df_from_path = kind.df_from_path
         self.shuffle = shuffle
+        self.numfiles = os.listdir(self.data_folder)
 
     def file_names(self):
         file_names = os.listdir(self.data_folder)
         if self.shuffle:
             random.shuffle(file_names)
-        for file_name in file_names:
+        for i, file_name in enumerate(file_names):
             _, ext = os.path.splitext(file_name)
             if ext not in self.exp_exts:
                 logging.debug(
                     f'Unexpected extension: skipping file {file_name}.')
                 continue
-            yield file_name
+            yield i, file_name
 
     def single_file(self, file_name):
         _, ext = os.path.splitext(file_name)
@@ -145,7 +147,7 @@ class DataFiles:
         return no_ext_file_name[-1]
 
     def __iter__(self):
-        for file_name in self.file_names():
+        for i, file_name in self.file_names():
             file_path = os.path.join(self.data_folder, file_name)
             yield File(
                 df=self.df_from_path(file_path),
@@ -153,4 +155,5 @@ class DataFiles:
                 trial=self.get_trial(file_name),
                 path=file_path,
                 name=file_name,
-                kind=self.kind)
+                kind=self.kind,
+                number=f'{i}/{self.numfiles}')

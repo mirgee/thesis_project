@@ -11,7 +11,7 @@ import mne
 import nolds
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from lib.HiguchiFractalDimension import hfd
-from lib.nolitsa.nolitsa.utils import statcheck
+from lib.nolitsa.nolitsa.utils import statcheck, gprange
 from lib.nolitsa.nolitsa.d2 import c2_embed, d2, ttmle
 from lib.nolitsa.nolitsa.delay import acorr, adfd, dmi
 from lib.nolitsa.nolitsa.dimension import afn, fnn
@@ -20,7 +20,6 @@ from lib.nolitsa.nolitsa.surrogates import iaaft
 
 registered_algos = []
 measure_names = []
-EMBED_DIM = 10
 
 
 def log_result(f):
@@ -41,7 +40,7 @@ def register(algo_name):
         registered_algos.append(f)
 
         @wraps(f)
-        def wrapper(*args, **kwargs):
+        def wrapper(data, *args, **kwargs):
             return f
     return decorator
 
@@ -97,7 +96,7 @@ def compute_tau_via_adfd(data, dim=10):
     return ddisp[forty]
 
 
-@register('lyap')
+# @register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     dim = 10
@@ -105,6 +104,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     window = 50
     maxt = 15
     sampl_period = 1/250
+
     tau_dim_to_maxt = {
         (2, 5): 12,
         (2, 6): 14,
@@ -163,6 +163,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
         (5, 17): 85,
         (5, 18): 90,
     }
+
     if autoselect_params:
         try:
             data, _ = find_least_stationary_window(
@@ -196,19 +197,47 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     return lyap
 
 
-# @register('corr')
+@register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa'):
-    dims = list(range(3, 10))
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
+    def smooth(y, box_pts):
+        box = np.ones(box_pts)/box_pts
+        y_smooth = np.convolve(y, box, mode='same')
+        return y_smooth
+
+    dim = 10
+    dims = np.arange(2, 30 + 1)
     tau = 3
-    window = 100
+    window = 50
     maxt = 30
+    rs = gprange(0.05, 10, 100)
     if lib == 'nolitsa':
-        for dim in dims:
-            r, c = c2_embed(data, dim=[dim], tau=tau, r=100,
+        if autoselect_params:
+            if len(data) > 15000:
+                data, _ = find_least_stationary_window(
+                    data, win_width=15000, slide_width=100)
+            tau = compute_tau_via_acorr(data)
+            # By passing integer r, we are using method for automatic selection
+            # of range suggested by Galka (with our modified version of the
+            # nolitsa library)
+            rcs = c2_embed(data, dim=dims, tau=tau, r=100,
+                           metric='chebyshev', window=window)
+            d2s = [np.polyfit(np.log(r), np.log(c), 1)[0] for (r, c) in rcs
+                   if len(r) > 0 and len(c) > 0]
+            # d2s = smooth(d2s, 2)
+            # diffs = np.diff(d2s)
+            # sums = np.asarray(
+            #     [np.abs(max(diffs[i-2:i+3]) - min(diffs[i-2:i+3]))
+            #      for i in range(2, len(diffs)-3)])
+            # return d2s[np.argmin(sums)]
+            return d2s[np.argmax(d2s)]
+        else:
+            r, c = c2_embed(data, dim=[dim], tau=tau, r=rs,
                             metric='chebyshev', window=window)[0]
-            d = d2(r, c, hwin=3)
-            return sum(d[:maxt])/maxt
+            if len(r) > 0 and len(c) > 0:
+                return np.polyfit(np.log(r), np.log(c), 1)[0]
+            else:
+                return np.nan
     elif lib == 'nolds':
         prev_val = 0
         for dim in dims:
@@ -246,8 +275,8 @@ def compute_sampen(data):
 def compute_higuchi(data):
     num_k = 50
     k_max = 50
-    win_width = 1500
-    win_shift = 200
+    win_width = 5*250
+    win_shift = 125
     win_beg = 0
     results = []
     while win_beg+win_width < len(data):
