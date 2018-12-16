@@ -99,9 +99,9 @@ def compute_tau_via_adfd(data, dim=10):
 
 @register('lyap')
 @log_result
-def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
-    dim = 8
-    tau = 1
+def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
+    dim = 10
+    tau = 7
     window = 50
     maxt = 15
     sampl_period = 1/250
@@ -182,6 +182,8 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=True):
         tau_adfd = compute_tau_via_adfd(data, dim)
 
         maxt = tau_dim_to_maxt[(tau, dim)]
+    else:
+        maxt = dim * tau
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
