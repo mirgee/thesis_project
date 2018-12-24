@@ -1,5 +1,7 @@
 *__pycache__*
 *.swp
+*.swo
 notebooks/.ipynb_checkpoints/*
 *.pyc
 *.png
+*.pkl

@@ -19,7 +19,9 @@ def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
         df = df.astype(float)
 
     df_y = pd.read_pickle(os.path.join(LABELED_ROOT, kind, 'meta', 'meta.pkl'))
-    if set(df_y.columns).isdisjoint(set(df.columns)):
+    # if set(df_y.columns).isdisjoint(set(df.columns)):
+    if set(df_y.columns) != set(df.columns):
+        df = df.drop(df_y.columns, axis=1, errors='ignore')
         df = df.join(df_y)
 
     df_bef = df.loc[(slice(None), 'a'), :]
