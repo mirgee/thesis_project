@@ -111,7 +111,7 @@ class DataFiles:
         self.data_folder = kind.data_folder
         self.df_from_path = kind.df_from_path
         self.shuffle = shuffle
-        self.numfiles = os.listdir(self.data_folder)
+        self.numfiles = len(os.listdir(self.data_folder))
 
     def file_names(self):
         file_names = os.listdir(self.data_folder)
@@ -136,7 +136,21 @@ class DataFiles:
             trial=self.get_trial(file_path),
             path=file_path,
             name=file_name,
-            kind=self.kind)
+            kind=self.kind,
+            number=None)
+
+    def from_index_trial(self, index, trial):
+        file_name = ''.join((str(index), str(trial))) + self.exp_exts[0]
+        assert (file_name in os.listdir(self.data_folder)), file_name
+        file_path = os.path.join(self.data_folder, file_name)
+        return File(
+            df=self.df_from_path(file_path),
+            id=index,
+            trial=trial,
+            path=file_path,
+            name=file_name,
+            kind=self.kind,
+            number=None)
 
     def get_index(self, file_name):
         no_ext_file_name = os.path.splitext(file_name)[0]
