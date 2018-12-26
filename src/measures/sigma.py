@@ -3,6 +3,7 @@ import os
 
 import click
 import pandas as pd
+import numpy as np
 from scipy.stats import ks_2samp
 
 import measures.algorithms as algos
@@ -24,7 +25,7 @@ def create_sigma_pkl(in_df, kind, output_path):
                                       names=['channel', 'measure'])
     idxs = pd.MultiIndex.from_product([list(range(1, 134)), ['a', 'b']],
                                       names=['patient', 'trial'])
-
+    main_df = pd.DataFrame(columns=cols, index=idxs)
     for measure_name in in_df.columns.levels[1]:
         for algo in algos.registered_algos:
             if measure_name == algo.algo_name:
@@ -43,7 +44,8 @@ def create_sigma_pkl(in_df, kind, output_path):
             for channel_name in CHANNEL_NAMES:
                 true_stat = in_df.loc[(file.id, file.trial), channel_name]
                 time_series = file.df.loc[:, channel_name]
-                new_row = compute_sigma(time_series, true_stat, f)
+                sigma = compute_sigma(time_series, true_stat, f)
+                new_row = {(channel_name, measure_name): sigma}
                 main_df.loc[(file.id, file.trial)] = pd.Series(new_row)
                 logging.debug("New row: \n%s" % new_row)
                 logging.debug(f'Saving training data at {output_path}.')
@@ -60,7 +62,8 @@ def main(in_pkl, kind):
 
     in_df = pd.read_pickle(in_pkl)
     output_path = os.path.join(
-        LABELED_ROOT, os.path.splitext(os.path.split(in_pkl)[1])[0])
+        LABELED_ROOT, os.path.splitext(os.path.split(in_pkl)[1])[0]) + \
+        '_sigmas.pkl'
     logging.info(f'Creating sigmas for file {in_pkl} in file {output_path}')
 
     create_sigma_pkl(in_df, kind, output_path)
