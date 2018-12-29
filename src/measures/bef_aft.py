@@ -85,7 +85,6 @@ def main(measures, format, kind):
     logging.info('Creating dataframe of all input measures.')
     output_path = os.path.join(LABELED_ROOT, kind)
     join_to_all(measures, output_path, kind)
-    return
 
     logging.info('Creating before and after dataframes.')
 
