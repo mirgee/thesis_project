@@ -153,10 +153,14 @@ dependencies:
   - zlib=1.2.11=ha838bed_2
   - zope=1.0=py36_0
   - pip:
+    - deap==1.2.2
     - nolds==0.4.1
+    - nolitsa==0.1
     - pybind11==2.2.4
     - pyrqa==1.0.6
+    - pytisean==0.1.1
     - pyts==0.7.1
     - pyunicorn==0.6.0
+    - sklearn-genetic==0.1
     - watermark==1.6.1
 prefix: /home/miroslav/anaconda3/envs/thesis
