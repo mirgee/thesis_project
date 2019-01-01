@@ -1,3 +1,4 @@
+from functools import reduce
 import logging
 import os
 
@@ -5,7 +6,7 @@ import click
 import pandas as pd
 
 import measures.algorithms as algos
-from config import LABELED_ROOT
+from config import CHANNEL_NAMES, LABELED_ROOT
 
 
 def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
@@ -58,6 +59,22 @@ def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
     logging.debug(f'{measure.upper()} PATIENTS AFTER:\n{df_aft}')
 
 
+def join_to_all(measures, output_path, kind):
+    dfs_t1 = [
+        pd.read_pickle(
+            os.path.join(
+                LABELED_ROOT, kind, m, f'training_{m}.pkl')) for m in measures]
+    dfs_t2 = [df.loc[:, CHANNEL_NAMES] for df in dfs_t1]
+    dfs = [pd.concat(
+        [df], keys=[m], axis=1).swaplevel(0, 1, 1) for m, df in zip(
+            measures, dfs_t2)]
+    df_all = reduce(
+        lambda left,right: pd.merge(
+            left, right, how='outer', left_index=True, right_index=True), dfs)
+    df_all.to_pickle(os.path.join(output_path, 'all', 'training_all.pkl'))
+    logging.debug(f'CREATED ALL:\n{df_all}')
+
+
 @click.command()
 @click.argument('measures', nargs=-1, type=str)
 @click.option('--format', type=str, default='pkl')
@@ -65,9 +82,13 @@ def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
 def main(measures, format, kind):
     logging.basicConfig(level=logging.DEBUG)
 
+    logging.info('Creating dataframe of all input measures.')
+    output_path = os.path.join(LABELED_ROOT, kind)
+    join_to_all(measures, output_path, kind)
+
     logging.info('Creating before and after dataframes.')
 
-    for measure in measures + ('all',):
+    for measure in measures:
         output_path = os.path.join(LABELED_ROOT, kind, measure)
         try:
             create_bef_aft_df(output_path, kind, measure, format)
