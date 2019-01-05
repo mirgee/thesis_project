@@ -29,7 +29,7 @@ def create_meta_df(output_path):
         return dep
 
     logging.info('Creating dataframe with the meta information.')
-    cols = ['resp', 'b/a', 'sex', 'age', 'sc', 'sc_bef', 'sc_aft', 'dep',
+    cols = ['resp', 'b/a', 'sex', 'age', 'sfreq', 'sc', 'sc_bef', 'sc_aft', 'dep',
             'dep_bef', 'dep_aft', 'change']
     idxs = pd.MultiIndex.from_product([list(range(1, 134)), ['a', 'b']],
                                       names=['patient', 'trial'])
@@ -43,6 +43,7 @@ def create_meta_df(output_path):
         extra_df.loc[(index, trial)]['b/a'] = 0 if trial == 'a' else 1
         extra_df.loc[(index, trial)]['age'] = meta_row['AGE']
         extra_df.loc[(index, trial)]['sex'] = meta_row['SEX']
+        extra_df.loc[(index, trial)]['sfreq'] = meta_row['freq']
         m1 = meta_row['M_1']
         m4 = meta_row['M_4']
         extra_df.loc[(index, trial)]['sc'] = m1 if trial == 'a' else m4
@@ -62,6 +63,7 @@ def create_meta_df(output_path):
         {'resp': 'category',
          'b/a': 'category',
          'sex': 'category',
+         'sfreq': int,
          'age': int,
          'sc': float,
          'sc_bef': int,
