@@ -100,9 +100,9 @@ def compute_tau_via_adfd(data, dim=10):
 @log_result
 def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     dim = 10
-    tau = 7
+    tau = 3
+    maxt = dim * tau
     window = 50
-    maxt = 15
     sampl_period = 1/250
 
     tau_dim_to_maxt = {
@@ -169,6 +169,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
             data, _ = find_least_stationary_window(
                 data, win_width=15000, slide_width=100)
         except AssertionError:
+            logging.error(f'Could not find least stationary window, {len(data)}')
             return np.nan
 
         tau_acorr = compute_tau_via_acorr(data)
@@ -183,8 +184,6 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
         tau_adfd = compute_tau_via_adfd(data, dim)
 
         maxt = tau_dim_to_maxt[(tau, dim)]
-    else:
-        maxt = dim * tau
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
@@ -197,25 +196,25 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
+def compute_corr_dim(data, lib='nolitsa', autoselect_params=True):
     def smooth(y, box_pts):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
         return y_smooth
 
-    dim = 10
+    dim = 15
     dims = np.arange(2, 30 + 1)
-    tau = 3
+    tau = 4
     window = 50
     maxt = 30
     rs = gprange(0.05, 10, 100)
     if lib == 'nolitsa':
         if autoselect_params:
-            if len(data) > 15000:
-                data, _ = find_least_stationary_window(
-                    data, win_width=15000, slide_width=100)
+            # if len(data) > 15000:
+            #     data, _ = find_least_stationary_window(
+            #         data, win_width=15000, slide_width=100)
             tau = compute_tau_via_acorr(data)
             # By passing integer r, we are using method for automatic selection
             # of range suggested by Galka (with our modified version of the
@@ -264,26 +263,30 @@ def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-@register('sampen')
+# @register('sampen')
 @log_result
 def compute_sampen(data):
     return nolds.sampen(data, emb_dim=2)
 
 
-# @register('higu')
+@register('higu')
 @log_result
-def compute_higuchi(data):
-    num_k = 50
-    k_max = 50
-    win_width = 5*250
-    win_shift = 125
-    win_beg = 0
-    results = []
-    while win_beg+win_width < len(data):
-        results.append(
-            hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
-        win_beg += win_shift
-    return sum(results)/len(results)
+def compute_higuchi(data, window=False):
+    num_k = 20
+    k_max = 7
+    if window:
+        win_width = 5*250
+        win_shift = 125
+        win_beg = 0
+        results = []
+        while win_beg+win_width < len(data):
+            results.append(
+                hfd(data[win_beg:win_beg+win_width], num_k=num_k, k_max=k_max))
+            win_beg += win_shift
+        ret = sum(results)/len(results)
+    else:
+        ret = hfd(data, num_k=num_k, k_max=k_max)
+    return ret
 
 
 # @register('sigma_lyap')
@@ -323,11 +326,11 @@ def compute_sigma_mle(data):
 
 @log_result
 def find_least_stationary_window(x, win_width=5000, slide_width=100):
-    assert len(x) > win_width
+    assert len(x) >= win_width, len(x)
     start, end, min_start, min_end = 0, win_width, 0, 0
     min_p_value = np.inf
 
-    while end < len(x):
+    while end <= len(x):
         w = x[start:end]
         p_value = statcheck(w)[1]
         if p_value < min_p_value:
