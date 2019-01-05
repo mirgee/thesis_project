@@ -12,6 +12,10 @@ from config import LABELED_ROOT
 from data.data_files import CHANNEL_NAMES, DataKind, files_builder
 from lib.nolitsa.nolitsa import surrogates
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a959623c365365762d943529dbafb2eacc723af3
 @algos.log_result
 def compute_sigma(x, true_stat, f):
     surr_sers = [surrogates.iaaft(x)[0] for _ in range(19)]

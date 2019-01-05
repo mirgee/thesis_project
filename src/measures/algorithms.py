@@ -324,6 +324,57 @@ def compute_sigma_mle(data):
     return np.abs(np.mean(mle)-true_mle) / np.std(mle)
 
 
+def _get_band(band, data):
+    fs = 250
+
+    # Get real amplitudes of FFT (only in postive frequencies)
+    fft_vals = np.absolute(np.fft.rfft(data))
+
+    # Get frequencies for amplitudes in Hz
+    fft_freq = np.fft.rfftfreq(len(data), 1.0/fs)
+
+    # Define EEG bands
+    eeg_bands = {'delta': (0, 4),
+                 'theta': (4, 8),
+                 'alpha': (8, 12),
+                 'beta': (12, 30),
+                 'gamma': (30, 45)}
+
+    freq_ix = np.where((fft_freq >= eeg_bands[band][0]) &
+                       (fft_freq <= eeg_bands[band][1]))[0]
+    return np.mean(fft_vals[freq_ix])
+
+
+@register('delta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('delta', data)
+
+
+@register('theta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('theta', data)
+
+
+@register('alpha')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('alpha', data)
+
+
+@register('beta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('beta', data)
+
+
+@register('gamma')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('gamma', data)
+
+
 @log_result
 def find_least_stationary_window(x, win_width=5000, slide_width=100):
     assert len(x) >= win_width, len(x)
