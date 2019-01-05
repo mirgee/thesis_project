@@ -99,10 +99,10 @@ def compute_tau_via_adfd(data, dim=10):
 # @register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
-    dim = 10
-    tau = 7
+    dim = 15
+    tau = 4
     window = 50
-    maxt = 15
+    maxt = dim*tau
     sampl_period = 1/250
 
     tau_dim_to_maxt = {
@@ -183,8 +183,6 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
         tau_adfd = compute_tau_via_adfd(data, dim)
 
         maxt = tau_dim_to_maxt[(tau, dim)]
-    else:
-        maxt = dim * tau
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
@@ -197,7 +195,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
 def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
     def smooth(y, box_pts):
@@ -264,7 +262,7 @@ def compute_hurst(data):
     return nolds.hurst_rs(data)
 
 
-@register('sampen')
+# @register('sampen')
 @log_result
 def compute_sampen(data):
     return nolds.sampen(data, emb_dim=2)
@@ -321,13 +319,64 @@ def compute_sigma_mle(data):
     return np.abs(np.mean(mle)-true_mle) / np.std(mle)
 
 
+def _get_band(band, data):
+    fs = 250
+
+    # Get real amplitudes of FFT (only in postive frequencies)
+    fft_vals = np.absolute(np.fft.rfft(data))
+
+    # Get frequencies for amplitudes in Hz
+    fft_freq = np.fft.rfftfreq(len(data), 1.0/fs)
+
+    # Define EEG bands
+    eeg_bands = {'delta': (0, 4),
+                 'theta': (4, 8),
+                 'alpha': (8, 12),
+                 'beta': (12, 30),
+                 'gamma': (30, 45)}
+
+    freq_ix = np.where((fft_freq >= eeg_bands[band][0]) &
+                       (fft_freq <= eeg_bands[band][1]))[0]
+    return np.mean(fft_vals[freq_ix])
+
+
+@register('delta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('delta', data)
+
+
+@register('theta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('theta', data)
+
+
+@register('alpha')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('alpha', data)
+
+
+@register('beta')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('beta', data)
+
+
+@register('gamma')
+@log_result
+def compute_av_theta_ampl(data):
+    return _get_band('gamma', data)
+
+
 @log_result
 def find_least_stationary_window(x, win_width=5000, slide_width=100):
     assert len(x) > win_width
     start, end, min_start, min_end = 0, win_width, 0, 0
     min_p_value = np.inf
 
-    while end < len(x):
+    while end <= len(x):
         w = x[start:end]
         p_value = statcheck(w)[1]
         if p_value < min_p_value:
