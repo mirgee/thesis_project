@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 import mne
-import nolds
+from lib.nolds.nolds import measures
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
 from lib.HiguchiFractalDimension import hfd
 from lib.nolitsa.nolitsa.utils import statcheck, gprange
@@ -190,16 +190,16 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
         poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
         lyap = poly[0]
     elif lib == 'nolds':
-        lyap = nolds.lyap_r(data, emb_dim=dim, lag=tau, min_tsep=window,
+        lyap = measures.lyap_r(data, emb_dim=dim, lag=tau, min_tsep=window,
                             trajectory_len=maxt) / sampl_period
     else:
         raise NotImplementedError(f'Library {lib} not supported.')
     return lyap
 
 
-@register('corr')
+# @register('corr')
 @log_result
-def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
+def compute_corr_dim(data, lib='nolds', autoselect_params=False):
     def smooth(y, box_pts):
         box = np.ones(box_pts)/box_pts
         y_smooth = np.convolve(y, box, mode='same')
@@ -241,7 +241,7 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
     elif lib == 'nolds':
         prev_val = 0
         for dim in dims:
-            corr_dim = nolds.corr_dim(data, emb_dim=dim)
+            corr_dim = measures.corr_dim(data, emb_dim=dim)
             if prev_val > corr_dim:
                 corr_dim = prev_val
                 break
@@ -252,22 +252,45 @@ def compute_corr_dim(data, lib='nolitsa', autoselect_params=False):
     return corr_dim
 
 
-# @register('dfa')
+@register('dfa')
 @log_result
 def compute_dfa(data):
-    return nolds.dfa(data)
+    from scipy.signal import butter, sosfilt, sosfreqz, hilbert
 
+    def butter_bandpass(lowcut, highcut, fs, order=5):
+        nyq = 0.5 * fs
+        low = lowcut / nyq
+        high = highcut / nyq
+        sos = butter(order, [low, high], analog=False,
+                                     btype='band', output='sos')
+        return sos
+
+    def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+        sos = butter_bandpass(lowcut, highcut, fs, order=order)
+        y = sosfilt(sos, data)
+        return y
+
+    # lowcut = 3
+    # highcut = 7
+    # fs = 250
+
+    # y = butter_bandpass_filter(data, lowcut, highcut, fs, order=4)
+    # amplitude_envelope = np.abs(hilbert(y))
+
+    nvals = measures.logarithmic_n(4, 320, 1.1)
+    return measures.dfa(data, nvals=nvals, overlap=True,
+                        offset_n=50)
 
 # @register('hurst')
 @log_result
 def compute_hurst(data):
-    return nolds.hurst_rs(data)
+    return measures.hurst_rs(data)
 
 
-@register('sampen')
+# @register('sampen')
 @log_result
 def compute_sampen(data):
-    return nolds.sampen(data, emb_dim=2)
+    return measures.sampen(data, emb_dim=2)
 
 
 # @register('higu')

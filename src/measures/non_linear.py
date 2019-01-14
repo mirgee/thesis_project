@@ -33,7 +33,7 @@ def compute_nl(df, window=None, minl=0, maxl=None):
                 })
                 start += window.slide
                 chunk_num += 1
-        elif len(data) > minl:
+        elif len(data) >= minl:
             length = len(data) if maxl is None else min(maxl, len(data))
             new_row.update({
                 (channel, f.algo_name): f(data[:length])
