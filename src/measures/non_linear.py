@@ -25,7 +25,7 @@ def compute_nl(df, window=None, minl=0, maxl=None):
         if window is not None and window.width > 0:
             start = 0
             chunk_num = 0
-            while start+window.width < len(data):
+            while start+window.width <= len(data):
                 chunk = data[start:start+window.width]
                 new_row.update({
                     (channel, f.algo_name, chunk_num): f(chunk)

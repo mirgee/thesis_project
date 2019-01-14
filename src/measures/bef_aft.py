@@ -14,16 +14,16 @@ def create_bef_aft_df(output_path, kind, measure='all', format='pkl'):
         os.path.join(output_path, f'training_{measure}.pkl'))
     logging.debug(f'TRAINING DF FOR {measure.upper()}:\n{df}')
     if isinstance(df.columns, pd.core.index.MultiIndex):
-        col = slice(None) if measure == 'all' else measure
+        col = slice(None) if measure == 'all' or measure == 'ampl' else measure
         df = df.loc[:, (slice(None), col)].dropna()
-        df.columns = df.columns.droplevel(1)
+        # df.columns = df.columns.droplevel(1)
         df = df.astype(float)
 
-    df_y = pd.read_pickle(os.path.join(LABELED_ROOT, kind, 'meta', 'meta.pkl'))
+    # df_y = pd.read_pickle(os.path.join(LABELED_ROOT, kind, 'meta', 'meta.pkl'))
     # if set(df_y.columns).isdisjoint(set(df.columns)):
-    if set(df_y.columns) != set(df.columns):
-        df = df.drop(df_y.columns, axis=1, errors='ignore')
-        df = df.join(df_y)
+    # if set(df_y.columns) != set(df.columns):
+    #     df = df.drop(df_y.columns, axis=1, errors='ignore')
+    #     df = df.join(df_y)
 
     df_bef = df.loc[(slice(None), 'a'), :]
     df_bef.index = df_bef.index.droplevel(1)
@@ -63,11 +63,12 @@ def join_to_all(measures, output_path, kind):
     dfs_t1 = [
         pd.read_pickle(
             os.path.join(
-                LABELED_ROOT, kind, m, f'training_{m}.pkl')) for m in measures]
-    dfs_t2 = [df.loc[:, CHANNEL_NAMES] for df in dfs_t1]
-    dfs = [pd.concat(
-        [df], keys=[m], axis=1).swaplevel(0, 1, 1) for m, df in zip(
-            measures, dfs_t2)]
+                LABELED_ROOT, kind, m, f'training_{m}.pkl')) \
+        for m in measures if m != 'all']
+    dfs = [df.loc[:, CHANNEL_NAMES] for df in dfs_t1]
+    # dfs = [pd.concat(
+    #     [df], keys=[m], axis=1).swaplevel(0, 1, 1) for m, df in zip(
+    #         measures, dfs_t2) if m != 'all']
     df_all = reduce(
         lambda left,right: pd.merge(
             left, right, how='outer', left_index=True, right_index=True), dfs)
