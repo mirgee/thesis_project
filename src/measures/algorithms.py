@@ -10,6 +10,7 @@ import pandas as pd
 import mne
 from lib.nolds.nolds import measures
 from config import CHANNEL_NAMES, LABELED_ROOT, PROCESSED_ROOT, RAW_ROOT
+from scipy.spatial.distance import pdist, squareform
 from lib.HiguchiFractalDimension import hfd
 from lib.nolitsa.nolitsa.utils import statcheck, gprange
 from lib.nolitsa.nolitsa.d2 import c2_embed, d2, ttmle
@@ -251,7 +252,7 @@ def compute_corr_dim(data, lib='nolds', autoselect_params=False):
     return corr_dim
 
 
-@register('dfa')
+# @register('dfa')
 @log_result
 def compute_dfa(data):
     from scipy.signal import butter, sosfilt, sosfreqz, hilbert
@@ -292,7 +293,7 @@ def compute_sampen(data):
     return measures.sampen(data, emb_dim=2)
 
 
-@register('higu')
+# @register('higu')
 @log_result
 def compute_higuchi(data, window=False):
     num_k = 20
@@ -368,37 +369,46 @@ def _get_band(band, data):
     return np.mean(fft_vals[freq_ix])
 
 
-@register('delta')
+# @register('delta')
 @log_result
 def compute_av_theta_ampl(data):
     return _get_band('delta', data)
 
 
-@register('theta')
+# @register('theta')
 @log_result
 def compute_av_theta_ampl(data):
     return _get_band('theta', data)
 
 
-@register('alpha')
+# @register('alpha')
 @log_result
 def compute_av_theta_ampl(data):
     return _get_band('alpha', data)
 
 
-@register('beta')
+# @register('beta')
 @log_result
 def compute_av_theta_ampl(data):
     return _get_band('beta', data)
 
 
-@register('gamma')
+# @register('gamma')
 @log_result
 def compute_av_theta_ampl(data):
     return _get_band('gamma', data)
 
 
+@register('rp')
 @log_result
+def compute_recurrence_plot(data, eps=0.10, steps=10, dtype='uint8'):
+    d = pdist(data[:,None])
+    d = np.floor(d/eps)
+    d[d>steps] = steps
+    Z = squareform(d).astype(dtype)
+    return Z
+
+
 def find_least_stationary_window(x, win_width=5000, slide_width=100):
     assert len(x) >= win_width, len(x)
     start, end, min_start, min_end = 0, win_width, 0, 0

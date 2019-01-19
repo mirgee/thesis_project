@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 import mne
-from config import PROJ_ROOT
+from config import PROJ_ROOT, LABELED_ROOT
 
 DATA_ROOT = os.path.abspath(os.path.join(PROJ_ROOT, 'data'))
 CHANNEL_NAMES = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2',
@@ -25,6 +25,10 @@ def df_from_fif(file_path):
     raw_fif = mne.io.read_raw_fif(file_path)
     t = pd.DataFrame(raw_fif.get_data())
     return pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
+
+
+def data_from_npy(file_path):
+    return np.load(file_path)
 
 
 def get_meta_df():
@@ -59,6 +63,7 @@ class DataKind(Enum):
     PROCESSED = 'processed'
     MNE = 'mne'
     SURROGATE = 'surrogate'
+    RECPLOT = 'recplot'
 
 
 DATA_KINDS = {
@@ -77,6 +82,11 @@ DATA_KINDS = {
         data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'surrogate')),
         exp_exts=('.csv',),
         df_from_path=df_from_tdt),
+    DataKind.RECPLOT: DataKindDefinition(
+        name='recplot',
+        data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'recplots')),
+        exp_exts=('.npy',),
+        df_from_path=data_from_npy),
 }
 
 
@@ -105,7 +115,7 @@ def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
 class DataFiles:
 
     def __init__(self, kind, shuffle=False):
-        assert os.path.isdir(kind.data_folder)
+        assert os.path.isdir(kind.data_folder), kind.data_folder
         self.kind = kind.name
         self.exp_exts = kind.exp_exts
         self.data_folder = kind.data_folder
@@ -113,10 +123,13 @@ class DataFiles:
         self.shuffle = shuffle
         self.numfiles = len(os.listdir(self.data_folder))
 
-    def file_names(self):
+    def file_names(self, include_path=False):
         file_names = os.listdir(self.data_folder)
         if self.shuffle:
             random.shuffle(file_names)
+        if include_path:
+            file_names = [os.path.join(self.data_folder, fn) for fn in
+                          file_names]
         for i, file_name in enumerate(file_names):
             _, ext = os.path.splitext(file_name)
             if ext not in self.exp_exts:
@@ -124,6 +137,23 @@ class DataFiles:
                     f'Unexpected extension: skipping file {file_name}.')
                 continue
             yield i, file_name
+
+    def train_test_file_names(self, test_size=0.3):
+        assert test_size < 1, 'test_size must be < 1'
+        all_names = [os.path.join(self.data_folder, name[1])
+                     for name in self.file_names()]
+        return all_names[int(test_size*len(all_names)):], \
+                all_names[:int(test_size*len(all_names))]
+
+    def get_labels(self, file_names=None, label='dep'):
+        if file_names is None:
+            file_names = [fn for _, fn in self.file_names()]
+        ls = pd.read_pickle(
+            os.path.join(LABELED_ROOT, 'processed', 'meta', 'meta.pkl'))
+        return [
+            ls.loc[(self.get_index(fn), self.get_trial(fn)), label]
+            for fn in file_names
+        ]
 
     def single_file(self, file_name):
         _, ext = os.path.splitext(file_name)
@@ -153,11 +183,11 @@ class DataFiles:
             number=None)
 
     def get_index(self, file_name):
-        no_ext_file_name = os.path.splitext(file_name)[0]
+        no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
         return int(no_ext_file_name[:-1])
 
     def get_trial(self, file_name):
-        no_ext_file_name = os.path.splitext(file_name)[0]
+        no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
         return no_ext_file_name[-1]
 
     def __iter__(self):
