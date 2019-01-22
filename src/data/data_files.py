@@ -64,6 +64,7 @@ class DataKind(Enum):
     MNE = 'mne'
     SURROGATE = 'surrogate'
     RECPLOT = 'recplot'
+    GAF = 'gaf'
 
 
 DATA_KINDS = {
@@ -85,6 +86,11 @@ DATA_KINDS = {
     DataKind.RECPLOT: DataKindDefinition(
         name='recplot',
         data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'recplots')),
+        exp_exts=('.npy',),
+        df_from_path=data_from_npy),
+    DataKind.GAF: DataKindDefinition(
+        name='gaf',
+        data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'gaf')),
         exp_exts=('.npy',),
         df_from_path=data_from_npy),
 }
@@ -184,10 +190,16 @@ class DataFiles:
 
     def get_index(self, file_name):
         no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
+        i = no_ext_file_name.find('-')
+        if i > 0:
+            no_ext_file_name = no_ext_file_name[:i]
         return int(no_ext_file_name[:-1])
 
     def get_trial(self, file_name):
         no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
+        i = no_ext_file_name.find('-')
+        if i > 0:
+            no_ext_file_name = no_ext_file_name[:i]
         return no_ext_file_name[-1]
 
     def __iter__(self):

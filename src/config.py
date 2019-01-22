@@ -2,8 +2,7 @@ import os.path
 import os
 
 # PROJ_ROOT = os.path.abspath(os.path.join(os.curdir))
-PROJ_ROOT = os.getenv('THESIS_ROOT', os.path.abspath(os.path.join(os.curdir)))
-
+PROJ_ROOT = os.getenv('THESIS_ROOT')
 DATA_ROOT = os.path.abspath(os.path.join(PROJ_ROOT, 'data'))
 RAW_ROOT = os.path.abspath(os.path.join(DATA_ROOT, 'raw'))
 PROCESSED_ROOT = os.path.abspath(os.path.join(DATA_ROOT, 'processed'))
