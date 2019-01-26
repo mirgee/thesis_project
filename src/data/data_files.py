@@ -99,7 +99,7 @@ DATA_KINDS = {
 File = namedtuple('File', 'df path id trial name kind number')
 
 
-def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
+def files_builder(kind=None, ext=None, file=None, subfolder=(), args, **kwargs):
     def kind_from_extension(ext):
         for kind, definition in DATA_KINDS.items():
             if ext in definition.exp_exts:
@@ -109,7 +109,7 @@ def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
     if ext is not None and kind is None:
         kind = kind_from_extension(ext)
     if kind in DATA_KINDS:
-        return DataFiles(DATA_KINDS[kind])
+        return DataFiles(DATA_KINDS[kind], subfolder=())
     elif kind == DataKind.META:
         return get_meta_df()
     elif kind == DataKind.MNE:
@@ -120,17 +120,21 @@ def files_builder(kind=None, ext=None, file=None, *args, **kwargs):
 
 class DataFiles:
 
-    def __init__(self, kind, shuffle=False):
+    def __init__(self, kind, shuffle=False, subfolder=()):
         assert os.path.isdir(kind.data_folder), kind.data_folder
         self.kind = kind.name
         self.exp_exts = kind.exp_exts
         self.data_folder = kind.data_folder
+        if len(subfolder) > 0:
+            self.data_folder = os.path.join(*((kind.data_folder,) + subfolder))
         self.df_from_path = kind.df_from_path
         self.shuffle = shuffle
         self.numfiles = len(os.listdir(self.data_folder))
 
-    def file_names(self, include_path=False):
+    def file_names(self, include_path=False, subfolder=()):
         file_names = os.listdir(self.data_folder)
+        if len(subdirs) > 0:
+            file_names = os.listdir(os.path.join(*((self.data_folder,) + subfolder)))
         if self.shuffle:
             random.shuffle(file_names)
         if include_path:
