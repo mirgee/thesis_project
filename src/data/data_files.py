@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 import random
@@ -99,7 +100,7 @@ DATA_KINDS = {
 File = namedtuple('File', 'df path id trial name kind number')
 
 
-def files_builder(kind=None, ext=None, file=None, subfolder=(), args, **kwargs):
+def files_builder(kind=None, ext=None, file=None, subfolder=(), *args, **kwargs):
     def kind_from_extension(ext):
         for kind, definition in DATA_KINDS.items():
             if ext in definition.exp_exts:
@@ -109,7 +110,7 @@ def files_builder(kind=None, ext=None, file=None, subfolder=(), args, **kwargs):
     if ext is not None and kind is None:
         kind = kind_from_extension(ext)
     if kind in DATA_KINDS:
-        return DataFiles(DATA_KINDS[kind], subfolder=())
+        return DataFiles(DATA_KINDS[kind], subfolder=subfolder)
     elif kind == DataKind.META:
         return get_meta_df()
     elif kind == DataKind.MNE:
@@ -131,15 +132,16 @@ class DataFiles:
         self.shuffle = shuffle
         self.numfiles = len(os.listdir(self.data_folder))
 
-    def file_names(self, include_path=False, subfolder=()):
-        file_names = os.listdir(self.data_folder)
-        if len(subdirs) > 0:
-            file_names = os.listdir(os.path.join(*((self.data_folder,) + subfolder)))
+    def file_names(self, include_path=False, subfolder=(), recursive=False):
+        data_folder = os.path.join(*((self.data_folder,) + subfolder))
+        if recursive:
+            file_names = glob.glob(data_folder + '/**/*'+self.exp_exts[0], recursive=True)
+        else:
+            file_names = os.listdir(data_folder)
+        if include_path and not recursive:
+            file_names = [os.path.join(data_folder, fn) for fn in file_names]
         if self.shuffle:
             random.shuffle(file_names)
-        if include_path:
-            file_names = [os.path.join(self.data_folder, fn) for fn in
-                          file_names]
         for i, file_name in enumerate(file_names):
             _, ext = os.path.splitext(file_name)
             if ext not in self.exp_exts:
