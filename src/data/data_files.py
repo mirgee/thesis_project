@@ -66,6 +66,7 @@ class DataKind(Enum):
     SURROGATE = 'surrogate'
     RECPLOT = 'recplot'
     GAF = 'gaf'
+    DIRECT = 'direct'
 
 
 DATA_KINDS = {
@@ -92,6 +93,11 @@ DATA_KINDS = {
     DataKind.GAF: DataKindDefinition(
         name='gaf',
         data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'gaf')),
+        exp_exts=('.npy',),
+        df_from_path=data_from_npy),
+    DataKind.DIRECT: DataKindDefinition(
+        name='direct',
+        data_folder=os.path.abspath(os.path.join(DATA_ROOT, 'direct')),
         exp_exts=('.npy',),
         df_from_path=data_from_npy),
 }
