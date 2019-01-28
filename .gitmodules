@@ -3,10 +3,10 @@
 	url = git@github.com:inuritdino/HiguchiFractalDimension.git
 [submodule "src/lib/nolitsa"]
 	path = src/lib/nolitsa
-	url = git@github.com:manu-mannattil/nolitsa.git
+	url = git@github.com:mirgee/nolitsa.git
 [submodule "src/lib/nolds"]
 	path = src/lib/nolds
-	url = git@github.com:CSchoel/nolds.git
+	url = git@github.com:mirgee/nolds.git
 [submodule "src/lib/braindecode"]
 	path = src/lib/braindecode
 	url = git@github.com:mirgee/braindecode.git
