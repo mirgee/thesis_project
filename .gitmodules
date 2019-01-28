@@ -7,3 +7,6 @@
 [submodule "src/lib/nolds"]
 	path = src/lib/nolds
 	url = git@github.com:CSchoel/nolds.git
+[submodule "src/lib/braindecode"]
+	path = src/lib/braindecode
+	url = git@github.com:mirgee/braindecode.git
