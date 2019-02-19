@@ -100,3 +100,6 @@ def shal_model(
     
     return model
 
+
+if __name__ == '__main__':
+    print(shal_model().summary())
