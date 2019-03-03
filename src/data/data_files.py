@@ -163,15 +163,24 @@ class DataFiles:
         return all_names[int(test_size*len(all_names)):], \
                 all_names[:int(test_size*len(all_names))]
 
-    def get_labels(self, file_names=None, label='dep'):
+    def get_filenames_with_labels(self, file_names=None, label='dep',
+                                  trial=None):
         if file_names is None:
-            file_names = [fn for _, fn in self.file_names()]
+            file_names = [fn for _, fn in self.file_names(include_path=True)]
         ls = pd.read_pickle(
             os.path.join(LABELED_ROOT, 'processed', 'meta', 'meta.pkl'))
-        return [
-            ls.loc[(self.get_index(fn), self.get_trial(fn)), label]
-            for fn in file_names
-        ]
+        if trial is None:
+            file_names, labels = file_names, [
+                ls.loc[(self.get_index(fn), self.get_trial(fn)), label]
+                for fn in file_names
+            ]
+        else:
+            file_names = [fn for fn in file_names if self.get_trial(fn)==trial]
+            labels = [
+                ls.loc[(self.get_index(fn), trial), label]
+                for fn in file_names
+            ]
+        return file_names, labels
 
     def single_file(self, file_name):
         _, ext = os.path.splitext(file_name)

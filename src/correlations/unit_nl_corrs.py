@@ -147,7 +147,6 @@ def rebuild_model(model_path, channel_n):
     return new_model
 
 
-
 def compute_correlations(model_path, measures_path):
     """
     Compute pairs of (measure value, unit activation) for each unit in each
@@ -166,6 +165,7 @@ def compute_correlations(model_path, measures_path):
             # TODO Compare each channel's value with the activation,
             # save the pair
             model = rebuild_model(model_path, channel_n)
+            out = model(file.df[channel])
 
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ def register(algo_name):
     return decorator
 
 
-# @register('fnn')
+ @register('fnn')
 @log_result
 def compute_dim_via_fnn(data, tau=3, window=50):
     R = 2.5
@@ -97,7 +97,7 @@ def compute_tau_via_adfd(data, dim=10):
     return ddisp[forty]
 
 
-# @register('lyap')
+@register('lyap')
 @log_result
 def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     dim = 10
