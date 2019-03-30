@@ -19,7 +19,7 @@ def shal_model(
     filter_time_length=25,
     pool_time_length=75,
     pool_time_stride=15,
-    final_conv_length=11,
+    final_conv_length='auto', # 11,
     batch_norm=True,
     batch_norm_alpha=0.1,
     conv_nonlin=square,
@@ -74,6 +74,8 @@ def shal_model(
     layer = k.layers.Dropout(drop_prob, name='drop')(layer)
     
     # TODO: Figure out final convolution length
+    if final_conv_length == 'auto':
+        final_conv_length = int(layer.shape[2])
     
     layer = k.layers.Conv2D(
         filters=n_classes,
@@ -88,15 +90,15 @@ def shal_model(
     layer = k.layers.Lambda(lambda x: x[:,0,0,:], name='squeeze')(layer)
     
     model = k.models.Model(inp, layer)
-    model.compile(
-        optimizer=k.optimizers.SGD(lr=0.01, momentum=0.99, decay=1e-5, nesterov=True),
-        loss=k.losses.binary_crossentropy,
-        metrics=['accuracy'],
-        loss_weights=None,
-        sample_weight_mode=None,
-        weighted_metrics=None, 
-        target_tensors=None
-    )
+    # model.compile(
+    #     optimizer=k.optimizers.SGD(lr=0.01, momentum=0.99, decay=1e-5, nesterov=True),
+    #     loss=k.losses.binary_crossentropy,
+    #     metrics=['accuracy'],
+    #     loss_weights=None,
+    #     sample_weight_mode=None,
+    #     weighted_metrics=None, 
+    #     target_tensors=None
+    # )
     
     return model
 

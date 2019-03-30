@@ -6,7 +6,7 @@ def deep_model(
         in_chans=19,
         n_classes=2,
         input_time_length=256,
-        final_conv_length=1,
+        final_conv_length='auto', # 1,
         n_filters_time=25,
         n_filters_spat=25,
         filter_time_length=10,
@@ -123,6 +123,9 @@ def deep_model(
     layer = add_conv_pool_block(layer, n_filters_2, filter_length_2, 2)
     layer = add_conv_pool_block(layer, n_filters_3, filter_length_3, 3)
     layer = add_conv_pool_block(layer, n_filters_4, filter_length_4, 4)
+
+    if final_conv_length == 'auto':
+        final_conv_length = int(layer.shape[2])
     
     layer = k.layers.Conv2D(
         filters=n_classes,
@@ -137,15 +140,15 @@ def deep_model(
     layer = k.layers.Lambda(lambda x: x[:,0,0,:], name='squeeze')(layer)
     
     model = k.models.Model(inp, layer)
-    model.compile(
-        optimizer=k.optimizers.SGD(lr=0.01, momentum=0.99, decay=1e-5, nesterov=True),
-        loss=k.losses.binary_crossentropy,
-        metrics=['accuracy'],
-        loss_weights=None,
-        sample_weight_mode=None,
-        weighted_metrics=None, 
-        target_tensors=None
-    )
+    # model.compile(
+    #     optimizer=k.optimizers.SGD(lr=0.01, momentum=0.99, decay=1e-5, nesterov=True),
+    #     loss=k.losses.binary_crossentropy,
+    #     metrics=['accuracy'],
+    #     loss_weights=None,
+    #     sample_weight_mode=None,
+    #     weighted_metrics=None, 
+    #     target_tensors=None
+    # )
     
     return model
 

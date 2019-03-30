@@ -132,14 +132,14 @@ def temp_model(
     layer = k.layers.Lambda(lambda x: x[:,0,0,:], name='squeeze')(layer)
     
     model = k.models.Model(inp, layer)
-    model.compile(
-        optimizer=k.optimizers.SGD(lr=0.001, momentum=0.99, decay=1e-5, nesterov=True),
-        loss=k.losses.binary_crossentropy,
-        metrics=['accuracy'],
-        loss_weights=None,
-        sample_weight_mode=None,
-        weighted_metrics=None, 
-        target_tensors=None
-    )
+    # model.compile(
+    #     optimizer=k.optimizers.SGD(lr=0.001, momentum=0.99, decay=1e-5, nesterov=True),
+    #     loss=k.losses.binary_crossentropy,
+    #     metrics=['accuracy'],
+    #     loss_weights=None,
+    #     sample_weight_mode=None,
+    #     weighted_metrics=None, 
+    #     target_tensors=None
+    # )
     
     return model
