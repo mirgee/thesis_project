@@ -138,12 +138,16 @@ class DataFiles:
         self.shuffle = shuffle
         self.numfiles = len(os.listdir(self.data_folder))
 
-    def file_names(self, include_path=False, subfolder=(), recursive=False):
+    def file_names(self, include_path=False, subfolder=(), recursive=False,
+                   index_trials=None):
         data_folder = os.path.join(*((self.data_folder,) + subfolder))
         if recursive:
             file_names = glob.glob(data_folder + '/**/*'+self.exp_exts[0], recursive=True)
         else:
             file_names = os.listdir(data_folder)
+        if index_trials is not None:
+            file_names = [fn for fn in file_names
+                          if fn.split('-')[0] in index_trials]
         if include_path and not recursive:
             file_names = [os.path.join(data_folder, fn) for fn in file_names]
         if self.shuffle:
