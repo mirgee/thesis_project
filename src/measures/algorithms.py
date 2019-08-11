@@ -46,7 +46,7 @@ def register(algo_name):
     return decorator
 
 
- @register('fnn')
+@register('fnn')
 @log_result
 def compute_dim_via_fnn(data, tau=3, window=50):
     R = 2.5
@@ -106,65 +106,6 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
     window = 50
     sampl_period = 1/250
 
-    tau_dim_to_maxt = {
-        (2, 5): 12,
-        (2, 6): 14,
-        (2, 7): 16,
-        (2, 8): 18,
-        (2, 9): 20,
-        (2, 10): 22,
-        (2, 11): 23,
-        (2, 12): 25,
-        (2, 13): 27,
-        (2, 14): 28,
-        (2, 15): 30,
-        (2, 16): 33,
-        (2, 17): 35,
-        (2, 18): 37,
-        (3, 5): 15,
-        (3, 6): 18,
-        (3, 7): 22,
-        (3, 8): 25,
-        (3, 9): 28,
-        (3, 10): 30,
-        (3, 11): 33,
-        (3, 12): 38,
-        (3, 13): 42,
-        (3, 14): 46,
-        (3, 15): 50,
-        (3, 16): 55,
-        (3, 17): 60,
-        (3, 18): 65,
-        (4, 5): 20,
-        (4, 6): 24,
-        (4, 7): 28,
-        (4, 8): 32,
-        (4, 9): 36,
-        (4, 10): 40,
-        (4, 11): 44,
-        (4, 12): 48,
-        (4, 13): 52,
-        (4, 14): 56,
-        (4, 15): 60,
-        (4, 16): 64,
-        (4, 17): 68,
-        (4, 18): 72,
-        (5, 5): 25,
-        (5, 6): 30,
-        (5, 7): 35,
-        (5, 8): 40,
-        (5, 9): 45,
-        (5, 10): 50,
-        (5, 11): 55,
-        (5, 12): 60,
-        (5, 13): 65,
-        (5, 14): 70,
-        (5, 15): 75,
-        (5, 16): 80,
-        (5, 17): 85,
-        (5, 18): 90,
-    }
-
     if autoselect_params:
         try:
             data, _ = find_least_stationary_window(
@@ -184,7 +125,7 @@ def compute_lyapunov(data, lib='nolitsa', autoselect_params=False):
         # Just to verify that adfd gives similar result for chosen dim
         tau_adfd = compute_tau_via_adfd(data, dim)
 
-        maxt = tau_dim_to_maxt[(tau, dim)]
+        maxt = tau * dim
     if lib == 'nolitsa':
         res = mle_embed(data, dim=[dim], tau=tau, window=window, maxt=maxt)[0]
         poly = np.polyfit(np.arange(len(res)), res/sampl_period, 1)
