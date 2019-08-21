@@ -9,29 +9,38 @@ from config import PROCESSED_ROOT
 from data.data_files import DataKind, files_builder
 
 
-def preprocess_raw_mne_file(mne_raw_data, proj=False):
+def preprocess_raw_mne_file(mne_raw_data, proj=False,
+                            remove_powerline_noise=False,
+                            low_pass_filter=False,
+                            remove_slow_drifts=False,
+                            crop_int_s=None):
+    # Apply averaging projection (remove outliers)
     if proj:
-        # Apply averaging projection (remove outliers)
         mne_raw_data.set_eeg_reference('average', projection=True)
         mne_raw_data.apply_proj()
 
     # Remove power line noise, may not be necessary depending on the data
-    # mne_raw_data.notch_filter(np.arange(50, 125, 50), filter_length='auto', phase='zero')
-    # mne_raw_data.notch_filter(50, filter_length='auto', phase='zero')
+    if remove_powerline_noise:
+        mne_raw_data.notch_filter(np.arange(50, 125, 50), filter_length='auto', phase='zero')
+        mne_raw_data.notch_filter(50, filter_length='auto', phase='zero')
 
-    # Or we can simply low pass filter, which may be better
-    # mne_raw_data.filter(.5, None, fir_design='firwin')
-    # mne_raw_data.filter(None, 70., fir_design='firwin')
+    # We can simply low pass filter, which may be better
+    if low_pass_filter:
+        mne_raw_data.filter(.5, None, fir_design='firwin')
+        mne_raw_data.filter(None, 70., fir_design='firwin')
 
-    # Remove slow drifts via high pass, bad practice in some situations, but may improve ICA
-    # mne_raw_data.filter(1., None, fir_design='firwin')
+    # Remove slow drifts via high pass, bad practice in some situations,
+    # but may improve ICA
+    if remove_slow_drifts:
+        mne_raw_data.filter(1., None, fir_design='firwin')
 
     # Downsample high frequency recordings to reduce the amount of data
     if int(mne_raw_data.info['sfreq']) == 1000:
         logging.info('Downsampling data...')
         mne_raw_data.resample(250, npad="auto")
 
-    # mne_raw_data.crop(0, 60)
+    if type(crop) == 'tuple' and len(crop) == 2:
+        mne_raw_data.crop(*crop_int_s)
 
     return mne_raw_data
 
@@ -44,8 +53,8 @@ def preprocess_all(output_file=PROCESSED_ROOT):
             mne_raw_data = preprocess_raw_mne_file(mne_raw_data)
         except ValueError:
             # Raised when duration is < 60 s, we may safely skip the file
-            logging.debug(f'Skipping file {file.name} because of insufficient '
-                          'duration.')
+            logging.debug(f'Skipping file {file.name} because of',
+                          'insufficient duration.')
             continue
 
         processed_file_name = os.path.splitext(file.name)[0] + '.fif'
@@ -61,7 +70,7 @@ def preprocess_all(output_file=PROCESSED_ROOT):
 def main(input_folder, output_folder):
     logging.basicConfig(level=logging.INFO)
 
-    logging.info('Preprocessing data')
+    logging.info('Preprocessing data...')
 
     preprocess_all()
 

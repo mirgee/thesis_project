@@ -10,43 +10,9 @@ import numpy as np
 import pandas as pd
 
 import mne
-from config import PROJ_ROOT, LABELED_ROOT
-
-DATA_ROOT = os.path.abspath(os.path.join(PROJ_ROOT, 'data'))
-CHANNEL_NAMES = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2',
-                 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz']
-
-
-def df_from_tdt(file_path):
-    return pd.read_table(
-        file_path, sep='\t', names=CHANNEL_NAMES, skiprows=[0])
-
-
-def df_from_fif(file_path):
-    raw_fif = mne.io.read_raw_fif(file_path)
-    t = pd.DataFrame(raw_fif.get_data())
-    return pd.DataFrame(np.transpose(t.values), columns=CHANNEL_NAMES)
-
-
-def data_from_npy(file_path):
-    return np.load(file_path)
-
-
-def get_meta_df():
-    raw_root = os.path.abspath(os.path.join(DATA_ROOT, 'raw'))
-    meta_column_names = ['freq', 'RESP_4W', 'RESP_FIN', 'REMISE_FIN', 'AGE',
-                         'SEX', 'M_1', 'M_4', 'M_F', 'delka lecby', 'lek 1',
-                         'lek 2', 'lek 3', 'lek 4']
-    meta_file_name = 'DEP-POOL_Final_144.xlsx'
-    return pd.read_excel(
-        os.path.join(raw_root, meta_file_name), index_col='ID',
-        names=meta_column_names)
-
-
-def mne_from_file(file):
-    sfreq = float(get_meta_df().loc[file.id, 'freq'])
-    info = mne.create_info(ch_names=CHANNEL_NAMES, sfreq=sfreq, ch_types='eeg')
-    return mne.io.RawArray(np.transpose(file.df.values), info)
+from config import LABELED_ROOT, PROJ_ROOT, DATA_ROOT, CHANNEL_NAMES
+from utils import (get_index, get_trial, df_from_tdt, df_from_fif,
+                   data_from_npy, get_meta_df, mne_from_file)
 
 
 class DataKindDefinition:
@@ -107,7 +73,10 @@ File = namedtuple('File', 'df path id trial name kind number')
 
 
 def files_builder(kind=None, ext=None, file=None, subfolder=(), *args, **kwargs):
+    """Creates a DataFiles iterator based on kind, extension, or returns a
+    single dataframe based on file."""
     def kind_from_extension(ext):
+        """Selects the first datakind matching the provided extension."""
         for kind, definition in DATA_KINDS.items():
             if ext in definition.exp_exts:
                 return kind
@@ -126,6 +95,10 @@ def files_builder(kind=None, ext=None, file=None, subfolder=(), *args, **kwargs)
 
 
 class DataFiles:
+    """
+    Iterator over file names of supplied properties. It supports shuffling,
+    subfolders, absolute / relative paths, and selection only before / after
+    trials."""
 
     def __init__(self, kind, shuffle=False, subfolder=()):
         assert os.path.isdir(kind.data_folder), kind.data_folder
@@ -140,6 +113,7 @@ class DataFiles:
 
     def file_names(self, include_path=False, subfolder=(), recursive=False,
                    index_trials=None):
+        """Generator of file names."""
         data_folder = os.path.join(*((self.data_folder,) + subfolder))
         if recursive:
             file_names = glob.glob(data_folder + '/**/*'+self.exp_exts[0], recursive=True)
@@ -161,25 +135,29 @@ class DataFiles:
             yield i, file_name
 
     def train_test_file_names(self, test_size=0.3):
+        """Split the file names into train / test samples."""
         assert test_size < 1, 'test_size must be < 1'
         all_names = [os.path.join(self.data_folder, name[1])
                      for name in self.file_names()]
         return all_names[int(test_size*len(all_names)):], \
-                all_names[:int(test_size*len(all_names))]
+            all_names[:int(test_size*len(all_names))]
 
     def get_filenames_with_labels(self, file_names=None, label='dep',
                                   trial=None):
+        """Get only labels to supplied filenames or all filenames with
+        corresponding labels."""
         if file_names is None:
             file_names = [fn for _, fn in self.file_names(include_path=True)]
         ls = pd.read_pickle(
             os.path.join(LABELED_ROOT, 'processed', 'meta', 'meta.pkl'))
         if trial is None:
             file_names, labels = file_names, [
-                ls.loc[(self.get_index(fn), self.get_trial(fn)), label]
+                ls.loc[(self.get_index(fn), get_trial(fn)), label]
                 for fn in file_names
             ]
         else:
-            file_names = [fn for fn in file_names if self.get_trial(fn)==trial]
+            file_names = [fn for fn in file_names if
+                          get_trial(fn) == trial]
             labels = [
                 ls.loc[(self.get_index(fn), trial), label]
                 for fn in file_names
@@ -187,20 +165,23 @@ class DataFiles:
         return file_names, labels
 
     def single_file(self, file_name):
+        """Get file instance corresponding to file of supplied name."""
         _, ext = os.path.splitext(file_name)
         assert (file_name in os.listdir(self.data_folder)
                 and ext in self.exp_exts)
         file_path = os.path.join(self.data_folder, file_name)
         return File(
             df=self.df_from_path(file_path),
-            id=self.get_index(file_path),
-            trial=self.get_trial(file_path),
+            id=get_index(file_path),
+            trial=get_trial(file_path),
             path=file_path,
             name=file_name,
             kind=self.kind,
             number=None)
 
     def from_index_trial(self, index, trial):
+        """Get File instance of the file corresponding to supplied index and
+        trial."""
         file_name = ''.join((str(index), str(trial))) + self.exp_exts[0]
         assert (file_name in os.listdir(self.data_folder)), file_name
         file_path = os.path.join(self.data_folder, file_name)
@@ -213,27 +194,13 @@ class DataFiles:
             kind=self.kind,
             number=None)
 
-    def get_index(self, file_name):
-        no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
-        i = no_ext_file_name.find('-')
-        if i > 0:
-            no_ext_file_name = no_ext_file_name[:i]
-        return int(no_ext_file_name[:-1])
-
-    def get_trial(self, file_name):
-        no_ext_file_name = os.path.split(os.path.splitext(file_name)[0])[1]
-        i = no_ext_file_name.find('-')
-        if i > 0:
-            no_ext_file_name = no_ext_file_name[:i]
-        return no_ext_file_name[-1]
-
     def __iter__(self):
         for i, file_name in self.file_names():
             file_path = os.path.join(self.data_folder, file_name)
             yield File(
                 df=self.df_from_path(file_path),
-                id=self.get_index(file_name),
-                trial=self.get_trial(file_name),
+                id=get_index(file_name),
+                trial=get_trial(file_name),
                 path=file_path,
                 name=file_name,
                 kind=self.kind,
