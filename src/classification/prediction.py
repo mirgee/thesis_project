@@ -6,16 +6,15 @@ from classification.utils import print_params
 from sklearn import metrics
 
 from config import CHANNEL_NAMES
-from data.utils import get_metapkl, prepare_dfs
+from data.utils import prepare_dfs
 
 
-@print_params
-def predict(lab, ba, cols, estimator, gs=None, evaluate_on_all=False,
+# @print_params
+def predict(lab, ba, cols, estimator, metapkl, gs=None, evaluate_on_all=False,
             channels=CHANNEL_NAMES, selector=None,
             print_incorrectly_predicted=False, show_selected=False, seed=213,
             eval_cv=True):
     df, df_bef, df_aft = prepare_dfs('all')
-    metapkl = get_metapkl()
     if cols is None:
         df = df.loc[(slice(None), slice(ba)), channels]
     else:
