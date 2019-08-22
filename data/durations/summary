@@ -1,0 +1,11 @@
+        duration_s  sfreq
+count       266.00  266.0
+unique      264.00    2.0
+top         100.54  250.0
+freq          2.00  198.0
+
+       duration_s                    
+            count unique     top freq
+sfreq                                
+250.0       198.0  197.0  81.432  2.0
+1000.0       68.0   68.0  84.588  1.0
