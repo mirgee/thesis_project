@@ -11,8 +11,8 @@ import pandas as pd
 
 import mne
 from config import LABELED_ROOT, PROJ_ROOT, DATA_ROOT, CHANNEL_NAMES
-from utils import (get_index, get_trial, df_from_tdt, df_from_fif,
-                   data_from_npy, get_meta_df, mne_from_file)
+from data.utils import (get_index, get_trial, df_from_tdt, df_from_fif,
+                        data_from_npy, get_meta_df, mne_from_file)
 
 
 class DataKindDefinition:

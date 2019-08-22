@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 import mne
-from config import DATA_ROOT, CHANNEL_NAMES, META_COLUMN_NAMES
+from config import DATA_ROOT, CHANNEL_NAMES, META_COLUMN_NAMES, LABELED_ROOT
 
 
 def df_from_tdt(file_path):
@@ -101,3 +101,37 @@ def raw_mne_from_tdt(file_path):
                            ch_types='eeg')
     data = mne.io.RawArray(np.transpose(df.values), info)
     return data
+
+
+def prepare_dfs(col='lyap', kind='processed'):
+    bands = {'delta', 'theta', 'alpha', 'beta', 'gamma'}
+    band = None
+    if col in bands:
+        band = col
+        col = 'ampl'
+    df = pd.read_pickle(os.path.join(
+        LABELED_ROOT, kind, col, f'training_{col}.pkl'))
+    df_bef = pd.read_pickle(
+        os.path.join(LABELED_ROOT, kind, col, f'{col}_bef.pkl'))
+    df_aft = pd.read_pickle(
+        os.path.join(LABELED_ROOT, kind, col, f'{col}_aft.pkl'))
+    if band is not None:
+        df = df.loc[:, (slice(None), band)]
+        df_bef = df_bef.loc[:, (slice(None), band)]
+        df_aft = df_aft.loc[:, (slice(None), band)]
+    return df, df_bef, df_aft
+
+
+def get_metapkl():
+    return pd.read_pickle(os.path.join(LABELED_ROOT, 'processed', 'meta',
+                                       'meta.pkl'))
+
+
+def prepare_resp_non(col='lyap'):
+    df, df_bef, df_aft = prepare_dfs(col)
+    return df[df['resp'] == 1], df[df['resp'] == 0]
+
+
+def prepare_dep_non(col='lyap'):
+    df, df_bef, df_aft = prepare_dfs(col)
+    return df[df['dep'] == 1], df[df['dep'] == -1]
